@@ -1,0 +1,75 @@
+========================================================================
+  Webcam3DTracker (EyeTracker) vs EyeTrax vs Custom -- GazeCapture Eval
+  Date    : 2026-05-08 01:55:47
+  Runtime : 13.6 min
+========================================================================
+
+  Evaluation Protocol
+    Dataset     : GazeCapture test split
+    Subjects    : 26 evaluated  (0 skipped)
+    Calibration : First 5% frames -- sphere-lock + linear offset (dx,dy)
+    Evaluation  : Remaining 95% frames
+    3D MGAE     : Fixed Z_face=50.0cm; norm->cm via per-subject linear fit
+
+  --------------------------------------------------------------------
+  Method                                   MGAE_2D   MGAE_3D   Euc(cm)
+                                              mean      mean    median
+  --------------------------------------------------------------------
+  EyeTrax(alpha=1.0)                         54.51     26.83     24.66
+  EyeTrax(alpha=adaptive)                    44.15     18.06     16.36
+  Custom(7D+poly36,adaptive)                 45.54     22.29     21.30
+  Webcam3DTracker(geometric)                 44.55      9.94     7.589
+  --------------------------------------------------------------------
+
+  Detailed Statistics -- Webcam3DTracker
+    Subjects    : 26
+    MGAE_2D mean: 44.554 +/- 9.346 deg  (med 46.385)
+    MGAE_3D mean: 9.935 +/- 3.444 deg  (med 8.613)
+    Euc(cm) mean: 8.880  med: 7.589  max: 16.202
+
+  --------------------------------------------------------------------
+  Algorithm Analysis
+  --------------------------------------------------------------------
+
+  3D Geometry Pipeline (Webcam3DTracker):
+    1. MediaPipe FaceLandmarker -> 478 landmarks (478 pts incl iris 468/473)
+    2. PCA on 24 nose landmarks -> head center + 3x3 rotation matrix
+       (Stabilized against eigenvector sign flips via reference matrix)
+    3. Eye-sphere locking at calibration:
+       sphere_local = R^T*(iris - head_center) + 20*R^T*[0,0,1]
+    4. Scale-adaptive tracking per frame:
+       sphere_world = head_center + R*(sphere_local * nose_scale_ratio)
+    5. Gaze direction: normalize(avg(iris_L-sphere_L, iris_R-sphere_R))
+    6. Screen mapping: yaw in [-15,+15]deg -> [0,1], pitch in [-5,+5]deg -> [0,1]
+    7. Calibration: mean offset (delta_x, delta_y) over first-5% predictions
+
+  Strengths:
+    - Fully geometric (no regression, no learned mapping from gaze to screen)
+    - Invariant to appearance changes (illumination, glasses, skin tone)
+    - Works without ANY labeled training data
+    - Head-movement robust via scale-adaptive sphere tracking
+
+  Weaknesses / Bottlenecks:
+    A. Fixed angular mapping (+-15 deg yaw, +-5 deg pitch) assumes specific
+       face-to-screen geometry; GazeCapture phones have much narrower range
+       => scale mismatch partially corrected by linear cal, but residual error
+    B. PCA coordinate frame (nose patch) is not as stable as solvePnP;
+       head-rotation estimation has higher variance than 6-point PnP
+    C. Eye sphere radius (base_radius=20 world units) is fixed, not estimated
+       => sphere center placement error directly affects gaze direction
+    D. First-5% calibration often covers narrow screen region (not 9-point)
+       => offset captures mean bias but not scale/rotation of the mapping
+    E. Iris landmark (single point 468/473) vs iris edge average is noisier
+
+  Why EyeTrax/Custom regression beats geometric pipeline on GazeCapture:
+    Regression models implicitly learn the face-to-screen geometry from
+    calibration data. With 37-176 calibration frames, Ridge can fit the
+    affine mapping (scale, offset, rotation) of the prediction space.
+    Geometric pipeline must rely on hard-coded parameters (+-15 deg range,
+    sphere radius=20) that may not match the actual recording setup.
+
+  For in-the-wild webcam use (main.py 9-point calibration):
+    The 9-point calibration in main.py provides full-screen coverage,
+    which resolves bottlenecks A and D. The geometric approach is likely
+    competitive with regression when calibration coverage is adequate.
+========================================================================

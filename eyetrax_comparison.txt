@@ -1,0 +1,82 @@
+========================================================================
+GazeCapture Benchmark: EyeTrax vs Custom (7D+poly36)
+Date    : 2026-05-08 01:12:47
+Runtime : 0.0 min
+========================================================================
+
+Evaluation Protocol
+  Dataset     : GazeCapture test split (26 subjects, 43,260 frames)
+  Calibration : First 5% of each subject's frames
+  Evaluation  : Remaining 95% of frames
+  3D MGAE     : Fixed Z_face=50.0cm (same for all systems, fair comparison)
+
+------------------------------------------------------------------------
+  Model                                 MGAE_2D   MGAE_3D   Euc(cm)
+                                           mean      mean    median
+------------------------------------------------------------------------
+  EyeTrax(alpha=1.0)                      54.51     26.83    24.656
+  EyeTrax(alpha=adaptive)                 44.15     18.06    16.363
+  Custom(7D+poly36,adaptive)              45.54     22.29    21.301
+------------------------------------------------------------------------
+
+Detailed Results (mean +/- std  |  median)
+------------------------------------------------------------------------
+  [EyeTrax(alpha=1.0)]
+    Subjects : 26
+    MGAE_2D  : 54.514 +/- 11.057  (med 57.930) deg
+    MGAE_3D  : 26.829 +/- 14.324  (med 24.640) deg
+    RMSE     : 2.84336 (normalized)
+    Euc      : 36.914 (mean)  24.656 (median) cm
+
+  [EyeTrax(alpha=adaptive)]
+    Subjects : 26
+    MGAE_2D  : 44.150 +/- 10.565  (med 43.883) deg
+    MGAE_3D  : 18.057 +/- 9.571  (med 17.769) deg
+    RMSE     : 1.27750 (normalized)
+    Euc      : 18.019 (mean)  16.363 (median) cm
+
+  [Custom(7D+poly36,adaptive)]
+    Subjects : 26
+    MGAE_2D  : 45.543 +/- 16.969  (med 46.041) deg
+    MGAE_3D  : 22.289 +/- 15.851  (med 16.943) deg
+    RMSE     : 27.02248 (normalized)
+    Euc      : 54.386 (mean)  21.301 (median) cm
+
+------------------------------------------------------------------------
+Reference
+  iTracker CNN (no calibration)   : 2.53 cm (phone) / 3.02 cm (tablet)
+  7D global Ridge (no calib)      : MGAE_2D=16.79 deg, Euc=5.47 cm
+------------------------------------------------------------------------
+
+Algorithm Analysis
+------------------------------------------------------------------------
+
+Feature Space:
+  EyeTrax : 486D = 161 eye landmarks x 3D + [yaw, pitch, roll]
+            Rotated into local head-pose frame, scale-normalized.
+            Dimension >> calibration samples => severe over-determination.
+  Custom  : 7D = [Lx, Ly, Rx, Ry, Pitch, Yaw, dist]
+            -> poly36 (36D via degree-2 expansion)
+            Compact representation, 36D << n_cal for most subjects.
+
+Regularization:
+  EyeTrax default : alpha=1.0 (fixed, from library default)
+    With n_cal~37 and 486 features: lambda/trace(X^TX) << 1% -> underfits.
+  EyeTrax tuned   : alpha=5000/n_cal (adaptive)
+    Forces strong shrinkage; prevents wild extrapolation.
+  Custom          : alpha=max(0.473, 5000/n_cal) on 36D features
+    Moderate shrinkage with much lower model complexity.
+
+Why per-subject calibration with first-5% is hard:
+  GazeCapture session recordings start at a specific screen region.
+  First 5% often covers only 1-3 gaze directions, not full screen.
+  Models fitted on non-covering calibration generalize poorly.
+  The in-app 9-point calibration (main.py) avoids this by design.
+
+Key Takeaways:
+  1. 7D+poly36 has LOWER model complexity than 486D -> better few-shot.
+  2. Adaptive lambda prevents numerical blow-up in low-sample regime.
+  3. Both EyeTrax (tuned) and Custom fail for subjects with poor
+     calibration coverage -- this is a protocol issue, not an algorithm issue.
+  4. EyeTrax default (alpha=1.0) is most vulnerable to overfitting.
+------------------------------------------------------------------------

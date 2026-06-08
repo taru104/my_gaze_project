@@ -1,0 +1,38 @@
+============================================================
+GazeCapture Validation Results
+Date       : 2026-05-06 21:14:00
+Runtime    : 148.0 min
+============================================================
+
+Dataset
+  Archive  : C:\Users\hazib\my_gaze_project\archive
+  Validity : faceGrid IsValid == 1 (face + eye detected)
+  train    : 264011 frames
+  val      : 12346 frames
+  test     : 43260 frames
+
+Feature extraction
+  Tool     : MediaPipe FaceLandmarker (IMAGE mode)
+  Features : 7D [Lx Ly Rx Ry Pitch Yaw dist]
+  Iris     : 478-landmark model, landmarks 468-477
+  Pose     : solvePnP(6-point) → RQDecomp3x3
+  Normalization: geometric (eye-corner-based)
+
+────────────────────────────────────────────────────────────
+A. Ridge Regression  (lambda=0.47, StandardScaler + poly36)
+────────────────────────────────────────────────────────────
+  RMSE  (normalized [0,1]) : 1.35735
+  MGAE  (degrees)          : 16.790
+  Euclidean error (cm)     : 6.137
+
+────────────────────────────────────────────────────────────
+B. GazeMLP  (7→poly36→FC16→FC16→2, gamma=1.0, 80 epochs)
+────────────────────────────────────────────────────────────
+  RMSE  (normalized [0,1]) : 0.25518
+  MGAE  (degrees)          : 16.773
+  Euclidean error (cm)     : 5.466
+
+────────────────────────────────────────────────────────────
+Reference (GazeCapture paper, iTracker CNN)
+  Euclidean error (cm) : 2.53 cm (phone) / 3.02 cm (tablet)
+────────────────────────────────────────────────────────────

@@ -1,0 +1,33 @@
+================================================================
+SOTA Evaluation: 7D Anatomical Features + Few-Shot Calibration
+Date       : 2026-05-08 00:19:52
+Runtime    : 0.0 min
+================================================================
+
+Method
+  Features     : 7D [Lx Ly Rx Ry Pitch Yaw dist]
+                 solvePnP(6pt) head pose, geometric pupil normalization
+  Calibration  : Ridge (lambda_base=0.473, adaptive per subject,  StandardScaler + poly36)
+                 First 5% of each test subject's frames
+  Evaluation   : Remaining 95% of each test subject's frames
+  3D MGAE      : Pinhole model Z_face=6.3/dist_feature, screen at Z=0
+  Subjects     : GazeCapture test split
+
+----------------------------------------------------------------
+Results (mean / median across all test subjects)
+----------------------------------------------------------------
+  Subjects evaluated : 26
+  MGAE_2D mean (deg) : 56.919  +/- 18.938
+  MGAE_2D med  (deg) : 62.191
+  MGAE_3D mean (deg) : 43.135  +/- 21.584
+  MGAE_3D med  (deg) : 40.039
+  RMSE  (normalized) : 74.51615
+  Euclidean mean(cm) : 234.330
+  Euclidean med (cm) : 55.644
+
+----------------------------------------------------------------
+Reference
+  iTracker CNN (no calibration) : 2.53 cm (phone) / 3.02 cm (tablet)
+  486D pipeline (few-shot calib): MGAE=85.29 deg (overfitting, lam=100)
+  7D global Ridge (no calib)    : MGAE=16.79 deg, Euc=5.47 cm
+----------------------------------------------------------------

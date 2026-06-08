@@ -1,0 +1,32 @@
+========================================================================
+  Iris Depth + AffineCalibration vs Previous Pipelines -- GazeCapture
+  Date    : 2026-05-08 14:32:58
+  Runtime : 11.2 min
+========================================================================
+
+  Evaluation Protocol
+    Dataset     : GazeCapture test split
+    Subjects    : 26 evaluated  (0 skipped)
+    Calibration : First 5% frames -- AffineCalibration (2x3 lstsq)
+    Evaluation  : Remaining 95% frames
+    3D MGAE     : Fixed Z_face=50.0cm; norm->cm via per-subject linear fit
+    Iris Depth  : X_mm = 11.7*(iris_x-cx)/iris_diam_px  (f cancels)
+
+  ------------------------------------------------------------------------
+  Method                                      MGAE_2D   MGAE_3D   Euc(cm)
+                                                 mean      mean    median
+  ------------------------------------------------------------------------
+  EyeTrax(alpha=1.0)                            54.51     26.83     24.66
+  EyeTrax(alpha=adaptive)                       44.15     18.06     16.36
+  Custom(7D+poly36,adaptive)                    45.54     22.29     21.30
+  Webcam3DTracker(PCA sphere)                   44.55      9.94     7.589
+  solvePnP+AffineCalib(v1)                      44.21     14.61     8.218
+  IrisDepth+AffineCalib(v2,NEW)                 43.92     14.71     7.806
+  ------------------------------------------------------------------------
+
+  Detailed Statistics -- IrisDepth + AffineCalibration
+    Subjects    : 26
+    MGAE_2D mean: 43.917 +/- 16.852 deg  (med 41.576)
+    MGAE_3D mean: 14.713 +/- 11.736 deg  (med 9.139)
+    Euc(cm) mean: 19.374  med: 7.806  max: 159.452
+========================================================================
