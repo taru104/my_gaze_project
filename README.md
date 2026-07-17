@@ -1,4 +1,6 @@
-# WebGaze — Accurate Eye Tracking from a Single Webcam
+# Tgaze
+
+> **T**rue **Gaze** — accurate eye tracking from a single webcam.
 
 Real-time gaze estimation using nothing but your laptop camera.
 **~1.4 cm accuracy at screen center** after a quick 9-point calibration — no infrared, no headset, no special hardware.
@@ -10,7 +12,7 @@ Real-time gaze estimation using nothing but your laptop camera.
 
 ## Why another gaze tracker?
 
-Browser/webcam gaze libraries (e.g. WebGazer.js) are easy to run but **coarse** (several cm to 10 cm+ error) and **fragile to head movement**. WebGaze aims for **near-hardware accuracy from a commodity webcam**:
+Browser/webcam gaze libraries (e.g. Tgazer.js) are easy to run but **coarse** (several cm to 10 cm+ error) and **fragile to head movement**. Tgaze aims for **near-hardware accuracy from a commodity webcam**:
 
 - 🎯 **~1.4 cm at center** with a 9-point calibration (single user, measured by leave-one-point-out)
 - 📏 **Distance-invariant** — iris position is normalized by the inter-eye-corner distance, so moving closer/farther doesn't break it
@@ -81,7 +83,7 @@ An earlier version normalized the iris against the *image center*, which turned 
 ## License
 
 © taru104. **Noncommercial use only.**
-Free for personal, research, and educational use **with attribution** — if you use or build on this project, you must credit **taru104 / WebGaze**.
+Free for personal, research, and educational use **with attribution** — if you use or build on this project, you must credit **taru104 / Tgaze**.
 **Commercial use requires prior written permission from the author.**
 (A commercial-friendly track, using models trained on synthetic / self-collected data, is planned — see roadmap.)
 
