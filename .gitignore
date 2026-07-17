@@ -12,11 +12,10 @@ EyeTracker/
 data/
 datasets/
 cache/
-# 生の視線録画(顔ランドマーク由来・プライバシー)と大きな中間データは公開しない
-logs/*.bin
-logs/*_landmarks.meta.json
-logs/*.npz
-logs/*_rich16d.npz
+# 生の視線録画(顔ランドマーク由来・プライバシー)は一切公開しない
+logs/
+# 整理用の一時フォルダ(壊れたファイル等)
+_review/
 *.pth
 *.pt
 *.h5
