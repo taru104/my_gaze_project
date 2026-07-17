@@ -26,13 +26,14 @@ import mediapipe as mp
 from mediapipe.tasks.python import vision as mp_vision
 from mediapipe.tasks.python.core.base_options import BaseOptions
 
-sys.path.insert(0, str(Path(__file__).parent))
+ROOT_DIR = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT_DIR))
 from calibration import AffineCalibration
 
-PROJECT_DIR  = Path(__file__).parent
+PROJECT_DIR  = ROOT_DIR
 ARCHIVE_DIR  = PROJECT_DIR / 'archive'
 MODEL_PATH   = PROJECT_DIR / 'face_landmarker.task'
-RESULTS_PATH = PROJECT_DIR / 'new_pipeline_results.txt'
+RESULTS_PATH = PROJECT_DIR / 'results' / 'new_pipeline_results.txt'
 FIXED_Z_FACE_CM = 50.0
 
 IRIS_DIAMETER_MM = 11.7   # 成人平均虹彩直径 (mm)

@@ -10,8 +10,11 @@ AffineCalibration vs PolyRidgeCalibration を LOO-CV で比較する。
   Y方向の非線形性 (dy, ey) はまぶた遮蔽による iris_diam 変動を模擬。
   pitch汚染 (cy) は過去セッションで観測した r=+0.37 の相関に対応。
 """
+import sys
+from pathlib import Path
 import numpy as np
 from collections import defaultdict
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from calibration import AffineCalibration, PolyRidgeCalibration, CALIB_POINTS_9
 
 SCREEN_CM_W = 30.9

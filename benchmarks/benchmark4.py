@@ -1,8 +1,11 @@
 """
 全手法のノイズ耐性比較。目標: 実ノイズ域(sigma=0.08-0.12)でLOO < 5deg。
 """
+import sys
+from pathlib import Path
 import numpy as np
 from collections import defaultdict
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from calibration import AffineCalibration, PolyRidgeCalibration, TargetedPolyCalibration, CALIB_POINTS_9
 
 SCREEN_CM_W = 30.9; SCREEN_CM_H = 17.4

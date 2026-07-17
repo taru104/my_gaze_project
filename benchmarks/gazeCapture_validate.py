@@ -30,17 +30,19 @@ from mediapipe.tasks.python.core.base_options import BaseOptions
 from pathlib import Path
 from torch.utils.data import DataLoader
 
-PROJECT_DIR  = Path(__file__).parent
-sys.path.insert(0, str(PROJECT_DIR))
+ROOT_DIR     = Path(__file__).parent.parent
+PROJECT_DIR  = ROOT_DIR
+sys.path.insert(0, str(ROOT_DIR))
+sys.path.insert(0, str(ROOT_DIR / 'legacy'))
 
 from gazeCapture_dataset import GazeCaptureRawIndex, GazeCaptureFeatureDataset, SPLIT_CODE
 from calibration import RidgeCalibration
 from train       import compute_mgae, compute_rmse, GazeTrainer
 
-ARCHIVE_DIR  = PROJECT_DIR / 'archive'
-CACHE_PATH   = PROJECT_DIR / 'gazeCapture_features_cache.npz'
-RESULTS_PATH = PROJECT_DIR / 'validation_results.txt'
-MODEL_PATH   = PROJECT_DIR / 'face_landmarker.task'
+ARCHIVE_DIR  = ROOT_DIR / 'archive'
+CACHE_PATH   = ROOT_DIR / 'cache' / 'gazeCapture_features_cache.npz'
+RESULTS_PATH = ROOT_DIR / 'results' / 'validation_results.txt'
+MODEL_PATH   = ROOT_DIR / 'face_landmarker.task'
 
 # ─── Geometry constants (same as features.py) ────────────────────────────────
 
@@ -153,7 +155,7 @@ def extract_7d(bgr_img: np.ndarray, landmarker, orientation: int = 1) -> np.ndar
 
 # ─── Phase 1: Feature extraction ────────────────────────────────────────────
 
-CHECKPOINT_PATH = PROJECT_DIR / 'gazeCapture_features_checkpoint.npz'
+CHECKPOINT_PATH = ROOT_DIR / 'cache' / 'gazeCapture_features_checkpoint.npz'
 CHECKPOINT_EVERY = 20_000  # save partial results every N successfully extracted frames
 
 

@@ -1,7 +1,8 @@
 """
 リアルタイム視線推定アプリケーション。
 Webカメラから視線推定し、画面上にガゼポイントを表示する。
-ｌｌFF
+ｌｌ
+FF
     Q/ESC       : 終了
 """
 
@@ -15,6 +16,7 @@ from typing import Optional, Tuple
 
 from estimator   import GazeEstimator
 from calibration import CALIB_POINTS_9
+from raw_landmark_logger import RawLandmarkLogger
 
 
 # ──── UI 定数 ────────────────────────────────────────────────────────────────
@@ -28,6 +30,7 @@ C_WARN   = (60,  60,  200)
 
 CALIB_TOTAL   = 3.0   # 各点の注視時間 (秒)
 CALIB_DISCARD = 1.0   # 最初の破棄時間 (秒)
+MULTIPOSE_TOTAL = 12.0  # 多姿勢モード: 各点で頭を振りながら収集する時間 (秒)
 
 SCREEN_CM_W = 30.9    # 画面の物理横幅 (cm)
 SCREEN_CM_H = 17.4    # 画面の物理縦幅 (cm)
@@ -51,6 +54,8 @@ class GazeApp:
         self._state         = 'idle'
         self._calib_idx     = 0
         self._calib_t_start = 0.0
+        self._multipose     = False
+        self._calib_total   = CALIB_TOTAL
         self._debug_mode    = False
 
         self._fps_t0  = time.time()
@@ -62,6 +67,8 @@ class GazeApp:
 
         self._click_px: Optional[Tuple[int, int]] = None   # 直近クリック画素座標
         self._click_t:  float = 0.0                        # クリック時刻
+        # タップ由来の正解座標。そのフレームのログに1回だけ載せて消す
+        self._pending_tap: Optional[Tuple[float, float]] = None
 
         logs_dir   = Path(__file__).parent / 'logs'
         logs_dir.mkdir(exist_ok=True)
@@ -76,9 +83,15 @@ class GazeApp:
             'calib_point_idx', 'calib_target_x', 'calib_target_y',
             'X_feat', 'Y_feat',
             'loo_mgae_deg', 'loo_euc_cm', 'loo_euc_x_cm', 'loo_euc_y_cm',
+            'tap_target_x', 'tap_target_y',
         ])
         self._log_path = log_path
         self._t0 = time.time()
+
+        # 生ランドマークロガー(全478点x,y,z)。将来の任意次元特徴を後から再構成できるよう
+        # 生データを丸ごと残す。CSV(加工後)と frame_idx で対応づく。
+        self._raw_logger = RawLandmarkLogger(logs_dir / f'session_{session_id}_landmarks')
+        self._frame_idx  = 0
 
     # ──────────────────────────────────────────────────────────────────────
 
@@ -105,10 +118,13 @@ class GazeApp:
 
             self._update_fps()
             self._write_log(gaze, debug)
+            self._log_raw(frame, gaze, debug)
+            self._pending_tap = None
+            self._frame_idx += 1
 
             canvas[:] = C_BG
 
-            self._draw_camera_preview(canvas, frame)  # キャリブ点より先に描画
+            self._draw_camera_preview(canvas, frame, debug)  # キャリブ点より先に描画
 
             if self._state == 'calibrating':
                 self._draw_calibration(canvas, gaze)
@@ -125,6 +141,8 @@ class GazeApp:
                 break
             elif key == ord('c'):
                 self._start_calibration()
+            elif key == ord('m'):
+                self._start_calibration(multipose=True)
             elif key == ord('r'):
                 self.estimator.reset_calibration()
                 self._state = 'idle'
@@ -137,7 +155,10 @@ class GazeApp:
         self.cap.release()
         cv2.destroyAllWindows()
         self._log_file.close()
+        self._raw_logger.close()
         print(f"[INFO] Session log saved: {self._log_path}")
+        print(f"[INFO] Raw landmarks saved: {self._raw_logger.bin_path} "
+              f"({self._raw_logger.n_written} frames)")
 
     # ──── マウスコールバック ─────────────────────────────────────────────────
 
@@ -151,32 +172,43 @@ class GazeApp:
 
         gt = np.array([x / self.win_w, y / self.win_h], dtype=np.float32)
         self.estimator.record_tap(gt)
+        self._pending_tap = (float(gt[0]), float(gt[1]))
         self._click_px = (x, y)
         self._click_t  = time.time()
         print(f"[INFO] 動的キャリブ記録: click=({gt[0]:.3f}, {gt[1]:.3f})")
 
     # ──── キャリブレーション制御 ─────────────────────────────────────────────
 
-    def _start_calibration(self):
+    def _start_calibration(self, multipose: bool = False):
         self.estimator.reset_calibration()
         self._state         = 'calibrating'
         self._calib_idx     = 0
         self._calib_t_start = time.time()
+        self._multipose     = multipose
+        self._calib_total   = MULTIPOSE_TOTAL if multipose else CALIB_TOTAL
         self._trail.clear()
-        print(f"[INFO] 9点キャリブレーション開始")
+        if multipose:
+            print(f"[INFO] 多姿勢キャリブ開始: 各点を見たまま頭をゆっくり回してください（各{MULTIPOSE_TOTAL:.0f}秒）")
+        else:
+            print(f"[INFO] 9点キャリブレーション開始")
 
     def _step_calibration(self, gaze: Optional[np.ndarray]):
         if self._calib_idx >= len(CALIB_POINTS_9):
             return
 
+        total   = getattr(self, '_calib_total', CALIB_TOTAL)
         elapsed = time.time() - self._calib_t_start
 
         if elapsed >= CALIB_DISCARD and self.estimator.face_detected:
             target = CALIB_POINTS_9[self._calib_idx]
-            weight = min((elapsed - CALIB_DISCARD) / (CALIB_TOTAL - CALIB_DISCARD), 1.0)
+            # 多姿勢モードは全フレーム平等(頭の各姿勢を等しく学習)。通常は時間で漸増。
+            if getattr(self, '_multipose', False):
+                weight = 1.0
+            else:
+                weight = min((elapsed - CALIB_DISCARD) / (CALIB_TOTAL - CALIB_DISCARD), 1.0)
             self.estimator.collect_calibration(target, weight)
 
-        if elapsed >= CALIB_TOTAL:
+        if elapsed >= total:
             self._calib_idx += 1
             self._calib_t_start = time.time()
 
@@ -212,18 +244,26 @@ class GazeApp:
             else:
                 cv2.circle(canvas, (px, py), 12, (60, 120, 60), 1)
 
+        total = getattr(self, '_calib_total', CALIB_TOTAL)
         if self._calib_idx < n_pts:
             px, py   = self._calib_pt_px(self._calib_idx)
             elapsed  = time.time() - self._calib_t_start
-            progress = min(elapsed / CALIB_TOTAL, 1.0)
+            progress = min(elapsed / total, 1.0)
             bw = 120
             cv2.rectangle(canvas, (px - bw//2, py+28), (px + bw//2, py+40), (40, 40, 40), -1)
             cv2.rectangle(canvas, (px - bw//2, py+28),
                           (px - bw//2 + int(bw * progress), py+40), C_ACTIVE, -1)
 
-        status = "Stabilizing..." if (time.time() - self._calib_t_start) < CALIB_DISCARD else "Look at the dot"
-        cv2.putText(canvas, f"CALIBRATION  {self._calib_idx+1}/{n_pts}: {status}",
-                    (w//2 - 260, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.9, C_TEXT, 2)
+        multipose = getattr(self, '_multipose', False)
+        if (time.time() - self._calib_t_start) < CALIB_DISCARD:
+            status = "Stabilizing..."
+        elif multipose:
+            status = "Keep looking & SLOWLY rotate your head (up/down/left/right)"
+        else:
+            status = "Look at the dot"
+        mode = "MULTI-POSE " if multipose else ""
+        cv2.putText(canvas, f"{mode}CALIBRATION  {self._calib_idx+1}/{n_pts}: {status}",
+                    (30, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.7, C_TEXT, 2)
         face_ok    = self.estimator.face_detected
         face_color = (0, 220, 80) if face_ok else (60, 60, 200)
         cv2.putText(canvas, "Face: OK" if face_ok else "Face: NOT FOUND",
@@ -265,11 +305,29 @@ class GazeApp:
             cv2.circle(canvas, (gx, gy), 22, C_GAZE, 2)
             cv2.circle(canvas, (gx, gy),  4, C_GAZE, -1)
 
-    def _draw_camera_preview(self, canvas: np.ndarray, frame: np.ndarray):
+    def _draw_camera_preview(self, canvas: np.ndarray, frame: np.ndarray,
+                             debug: Optional[dict] = None):
         ph, pw = 160, 213
         small  = cv2.resize(frame, (pw, ph))
         canvas[8:8+ph, 8:8+pw] = small
         cv2.rectangle(canvas, (8, 8), (8+pw, 8+ph), (60, 60, 60), 1)
+
+        # 頭部姿勢の矢印(実際に7Dで使う rich16d の pitch/yaw)。姿勢が正しく取れているか一目で分かる。
+        if debug is not None and debug.get('feat7d') is not None:
+            import math
+            feat = debug['feat7d']
+            pitch, yaw = float(feat[4]), float(feat[5])
+            cx, cy = 8 + pw // 2, 8 + ph // 2
+            L = 55
+            dx = int(-math.sin(yaw)  * L)     # 頭を向けた方向に水平に伸びる(符号反転済)
+            dy = int(-math.sin(pitch) * L)    # 上を向くと上に伸びる
+            cv2.circle(canvas, (cx, cy), 3, (0, 255, 255), -1)
+            cv2.arrowedLine(canvas, (cx, cy), (cx + dx, cy + dy),
+                            (0, 255, 255), 2, tipLength=0.3)
+            # 横向きで姿勢が荒れている(|yaw|大)ときは赤で警告色の数値
+            col = (0, 200, 255) if abs(math.degrees(yaw)) < 25 else (60, 120, 255)
+            cv2.putText(canvas, f"P{math.degrees(pitch):+.0f} Y{math.degrees(yaw):+.0f}deg",
+                        (10, 8 + ph - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.42, col, 1)
 
     def _draw_hud(self, canvas: np.ndarray, debug: Optional[dict]):
         w, h = self.win_w, self.win_h
@@ -293,16 +351,20 @@ class GazeApp:
             cv2.putText(canvas, f"CALIBRATED{err_str}", (10, h-15),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 220, 80), 2)
         else:
-            cv2.putText(canvas, "NOT CALIBRATED  (press C to start)", (10, h-15),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.65, C_WARN, 2)
+            cv2.putText(canvas, "NOT CALIBRATED", (10, h-52),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, C_WARN, 2)
+            cv2.putText(canvas, "C = calibrate (face front, hold still)",
+                        (10, h-32), cv2.FONT_HERSHEY_SIMPLEX, 0.5, C_TEXT, 1)
+            cv2.putText(canvas, "M = multi-pose: look at each dot & SLOWLY rotate head (all angles)",
+                        (10, h-14), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 200, 255), 1)
 
         # 頭部姿勢ゲート警告
         if debug and not debug.get('head_ok', True):
             dp = debug.get('head_delta_pitch', 0.0)
             dy = debug.get('head_delta_yaw',   0.0)
             cv2.putText(canvas,
-                        f"HEAD MOVED  dPitch:{dp:+.1f}deg  dYaw:{dy:+.1f}deg  (face forward)",
-                        (w//2 - 300, h//2 - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.75, C_WARN, 2)
+                        f"LOW CONFIDENCE  dPitch:{dp:+.1f}deg  dYaw:{dy:+.1f}deg",
+                        (10, h - 40), cv2.FONT_HERSHEY_SIMPLEX, 0.55, C_WARN, 1)
 
         # 瞬き表示
         if debug and debug.get('blink_detected', False):
@@ -381,7 +443,33 @@ class GazeApp:
             f"{x_feat:.5f}" if x_feat is not None else '',
             f"{y_feat:.5f}" if y_feat is not None else '',
             loo_mgae_s, loo_euc_s, loo_x_s, loo_y_s,
+            f"{self._pending_tap[0]:.4f}" if self._pending_tap else '',
+            f"{self._pending_tap[1]:.4f}" if self._pending_tap else '',
         ])
+
+    def _log_raw(self, frame: np.ndarray, gaze: Optional[np.ndarray],
+                 debug: Optional[dict]) -> None:
+        """全ランドマークを生ログに追記。顔未検出フレームはスキップ(欠番)。"""
+        if not debug:
+            return
+        lms = debug.get('landmarks')
+        if lms is None:
+            return
+        h, w = frame.shape[:2]
+        # キャリブ中の正解ターゲット(あれば)を一緒に残す → 将来の再学習で直接使える
+        target = None
+        if self._state == 'calibrating' and self._calib_idx < len(CALIB_POINTS_9):
+            target = CALIB_POINTS_9[self._calib_idx]
+        elif self._pending_tap is not None:
+            target = self._pending_tap
+        self._raw_logger.log(
+            frame_idx=self._frame_idx,
+            time_s=time.time() - self._t0,
+            img_w=w, img_h=h,
+            landmarks=lms,
+            target=target,
+            gaze=gaze,
+        )
 
     def _update_fps(self):
         self._fps_cnt += 1

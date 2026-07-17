@@ -221,6 +221,194 @@ class PolyRidgeCalibration:
         self._weights.clear()
 
 
+class RidgeCalibration:
+    """16D リッチ特徴ベクトル → 2D 画面座標。StandardScaler + Ridge(alpha=1.0) を x,y 各々。
+
+    旧 TargetedPolyCalibration は入力が [X_feat, Y_feat, pitch] の実質2特徴で、しかも
+    X_feat が『画像中心基準』のため顔の平行移動を視線と誤認していた(実測 loo 9.7cm)。
+    本クラスは目頭・目尻基準の両眼虹彩＋頭部姿勢を含む16Dを受ける(実測 loo 3.4cm)。
+    9点キャリブ(データが少ない)では豊富特徴でも過学習しないよう Ridge 正則化＋標準化で足りる
+    (poly項は不要。むしろ有害。research_log/RESUME §3.5 参照)。
+    """
+
+    def __init__(self, alpha: float = 1.0):
+        from sklearn.linear_model import Ridge
+        from sklearn.preprocessing import StandardScaler
+        self._scaler  = StandardScaler()
+        self._ridge_x = Ridge(alpha=alpha, fit_intercept=True)
+        self._ridge_y = Ridge(alpha=alpha, fit_intercept=True)
+        self._is_fitted = False
+        self._feats:   List[np.ndarray] = []
+        self._targets: List[List[float]] = []
+        self._weights: List[float]       = []
+
+    def add(self, feat: np.ndarray, x_norm: float, y_norm: float,
+            weight: float = 1.0) -> None:
+        self._feats.append(np.asarray(feat, dtype=np.float64).ravel())
+        self._targets.append([float(x_norm), float(y_norm)])
+        self._weights.append(max(0.0, float(weight)))
+
+    def fit(self) -> None:
+        F = np.array(self._feats,   dtype=np.float64)
+        T = np.array(self._targets, dtype=np.float64)
+        W = np.array(self._weights, dtype=np.float64)
+        Fs = self._scaler.fit_transform(F)
+        self._ridge_x.fit(Fs, T[:, 0], sample_weight=W)
+        self._ridge_y.fit(Fs, T[:, 1], sample_weight=W)
+        self._is_fitted = True
+
+    def predict(self, feat: np.ndarray) -> np.ndarray:
+        if not self._is_fitted:
+            return np.array([0.5, 0.5], dtype=np.float32)
+        Fs = self._scaler.transform(np.asarray(feat, dtype=np.float64).reshape(1, -1))
+        return np.array([float(self._ridge_x.predict(Fs)[0]),
+                         float(self._ridge_y.predict(Fs)[0])], dtype=np.float32)
+
+    @property
+    def is_fitted(self) -> bool:
+        return self._is_fitted
+
+    def reset(self) -> None:
+        self._is_fitted = False
+        self._feats.clear()
+        self._targets.clear()
+        self._weights.clear()
+
+
+class HuberCalibration:
+    """16D/7D 特徴 → 2D 画面座標。StandardScaler + HuberRegressor を x,y 各々。
+
+    RidgeCalibration より外れフレーム(まばたき/視線が的に届く前の遷移フレーム)に強い。
+    実データ探索(explore_accuracy.py 段階1/2)で全特徴セット・全前処理を通じて最良:
+    7D で実効 median 1.874cm (Ridge 3.120cm から ~40%改善)。小細工(除去/アンサンブル)は
+    かえって悪化＝素のHuberが一番。ハイパラもデフォルト(epsilon=1.35)が最良だった。
+    I/F は RidgeCalibration と同一(次元非依存)。
+    """
+
+    def __init__(self, epsilon: float = 1.35, alpha: float = 1e-4):
+        from sklearn.linear_model import HuberRegressor
+        from sklearn.preprocessing import StandardScaler
+        self._scaler  = StandardScaler()
+        self._eps, self._alpha = epsilon, alpha
+        self._ridge_x = HuberRegressor(epsilon=epsilon, alpha=alpha, max_iter=800)
+        self._ridge_y = HuberRegressor(epsilon=epsilon, alpha=alpha, max_iter=800)
+        self._is_fitted = False
+        self._feats:   List[np.ndarray] = []
+        self._targets: List[List[float]] = []
+        self._weights: List[float]       = []
+
+    def add(self, feat: np.ndarray, x_norm: float, y_norm: float,
+            weight: float = 1.0) -> None:
+        self._feats.append(np.asarray(feat, dtype=np.float64).ravel())
+        self._targets.append([float(x_norm), float(y_norm)])
+        self._weights.append(max(0.0, float(weight)))
+
+    def fit(self) -> None:
+        F = np.array(self._feats,   dtype=np.float64)
+        T = np.array(self._targets, dtype=np.float64)
+        W = np.array(self._weights, dtype=np.float64)
+        Fs = self._scaler.fit_transform(F)
+        # HuberRegressor は sample_weight 対応。0重みは避けたいので下限クリップ。
+        Wc = np.clip(W, 1e-3, None)
+        try:
+            self._ridge_x.fit(Fs, T[:, 0], sample_weight=Wc)
+            self._ridge_y.fit(Fs, T[:, 1], sample_weight=Wc)
+        except Exception:
+            # 収束失敗時は Ridge にフォールバック(まれ)
+            from sklearn.linear_model import Ridge
+            self._ridge_x = Ridge(alpha=1.0).fit(Fs, T[:, 0], sample_weight=Wc)
+            self._ridge_y = Ridge(alpha=1.0).fit(Fs, T[:, 1], sample_weight=Wc)
+        self._is_fitted = True
+
+    def predict(self, feat: np.ndarray) -> np.ndarray:
+        if not self._is_fitted:
+            return np.array([0.5, 0.5], dtype=np.float32)
+        Fs = self._scaler.transform(np.asarray(feat, dtype=np.float64).reshape(1, -1))
+        return np.array([float(self._ridge_x.predict(Fs)[0]),
+                         float(self._ridge_y.predict(Fs)[0])], dtype=np.float32)
+
+    @property
+    def is_fitted(self) -> bool:
+        return self._is_fitted
+
+    def reset(self) -> None:
+        from sklearn.linear_model import HuberRegressor
+        self._is_fitted = False
+        self._ridge_x = HuberRegressor(epsilon=self._eps, alpha=self._alpha, max_iter=800)
+        self._ridge_y = HuberRegressor(epsilon=self._eps, alpha=self._alpha, max_iter=800)
+        self._feats.clear()
+        self._targets.clear()
+        self._weights.clear()
+
+
+class H1Calibration:
+    """7D → 2D。視線キャリブの古典(虹彩→画面 2次多項式)に頭部姿勢補正を足した構成。
+
+    2段: (1)各ターゲット点で虹彩4D(目頭基準)を集約→2次多項式でベース注視点を予測、
+         (2)pitch/yaw/dist の2次多項式で「頭部姿勢による残差」を補正。
+    次元は7Dのまま(多項式は既存7Dの非線形展開でモデル内部。新しい特徴は足していない)。
+    多姿勢データで横向き30+を 線形Huber単体 14.55cm → 8.72cm に改善(explore_hybrid_pose H1)。
+    I/F は Ridge/HuberCalibration と同一(collect→add, finalize→fit, predict)。
+    """
+
+    def __init__(self, alpha_base: float = 0.1, alpha_pose: float = 1.0):
+        self._ab, self._ap = alpha_base, alpha_pose
+        self._is_fitted = False
+        self._feats:   List[np.ndarray] = []
+        self._targets: List[List[float]] = []
+        self._weights: List[float]       = []
+
+    def add(self, feat: np.ndarray, x_norm: float, y_norm: float,
+            weight: float = 1.0) -> None:
+        self._feats.append(np.asarray(feat, dtype=np.float64).ravel())
+        self._targets.append([float(x_norm), float(y_norm)])
+        self._weights.append(max(0.0, float(weight)))
+
+    def _mk(self, alpha):
+        from sklearn.preprocessing import PolynomialFeatures, StandardScaler
+        from sklearn.linear_model import Ridge
+        from sklearn.pipeline import make_pipeline
+        return make_pipeline(PolynomialFeatures(2), StandardScaler(), Ridge(alpha=alpha))
+
+    def fit(self) -> None:
+        F = np.array(self._feats,   dtype=np.float64)
+        T = np.array(self._targets, dtype=np.float64)
+        # (1) 各ターゲット点で虹彩4Dを集約(中央値) → 2次多項式でベース予測
+        key = np.round(T, 4)
+        uniq, ids = np.unique(key, axis=0, return_inverse=True)
+        Xa = np.array([np.median(F[ids == i][:, :4], axis=0) for i in range(len(uniq))])
+        self._bx = self._mk(self._ab).fit(Xa, uniq[:, 0])
+        self._by = self._mk(self._ab).fit(Xa, uniq[:, 1])
+        # (2) 全フレームでベースの残差を pitch/yaw/dist の2次で補正
+        base = np.column_stack([self._bx.predict(F[:, :4]), self._by.predict(F[:, :4])])
+        resid = T - base
+        P = F[:, 4:7]
+        self._rx = self._mk(self._ap).fit(P, resid[:, 0])
+        self._ry = self._mk(self._ap).fit(P, resid[:, 1])
+        # kappa_offset_norm 互換(ベース多項式の intercept を露出)
+        self._ridge_x = self._bx.named_steps['ridge']
+        self._ridge_y = self._by.named_steps['ridge']
+        self._is_fitted = True
+
+    def predict(self, feat: np.ndarray) -> np.ndarray:
+        if not self._is_fitted:
+            return np.array([0.5, 0.5], dtype=np.float32)
+        f = np.asarray(feat, dtype=np.float64).reshape(1, -1)
+        base = np.array([self._bx.predict(f[:, :4])[0], self._by.predict(f[:, :4])[0]])
+        corr = np.array([self._rx.predict(f[:, 4:7])[0], self._ry.predict(f[:, 4:7])[0]])
+        return (base + corr).astype(np.float32)
+
+    @property
+    def is_fitted(self) -> bool:
+        return self._is_fitted
+
+    def reset(self) -> None:
+        self._is_fitted = False
+        self._feats.clear()
+        self._targets.clear()
+        self._weights.clear()
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 @dataclass
@@ -293,10 +481,14 @@ class CalibrationPipeline:
         4. record_interaction(gt, gaze_2d, head_vec) でタップ履歴を蓄積
     """
 
+    # 推定を止める閾値ではなく「キャリブ姿勢からどれだけ外れたか」の警告閾値。
+    # 外れても estimator は推定を続ける(劣化するが止まらない)。
     HEAD_POSE_TOLERANCE_RAD: float = np.radians(20.0)
 
     def __init__(self):
-        self.poly_ridge = TargetedPolyCalibration()
+        # poly_ridge の名前は後方互換で維持(kappa_offset_norm 等が参照)。
+        # 中身は16D/7D非依存の RidgeCalibration。入力特徴の次元は features 側が決める。
+        self.poly_ridge = H1Calibration()
         self.dynamic    = DynamicCalibration()
         self._samples:       List[Tuple] = []
         self._pitch_samples: List[float] = []
@@ -329,13 +521,8 @@ class CalibrationPipeline:
         if len(self._samples) < 5:
             raise ValueError(f"キャリブレーションサンプルが不足: {len(self._samples)} < 5")
 
-        for gaze_2d, target, weight, pitch in self._samples:
-            self.poly_ridge.add(
-                float(gaze_2d[0]), float(gaze_2d[1]),
-                float(target[0]),  float(target[1]),
-                weight,
-                pitch_rad=pitch,
-            )
+        for feat, target, weight, pitch in self._samples:
+            self.poly_ridge.add(feat, float(target[0]), float(target[1]), weight)
         self.poly_ridge.fit()
 
         if self._pitch_samples:
@@ -343,10 +530,7 @@ class CalibrationPipeline:
             self._ref_yaw   = float(np.mean(self._yaw_samples))
 
         y_raw  = np.stack([s[1] for s in self._samples])
-        y_pred = np.array([
-            self.poly_ridge.predict(float(s[0][0]), float(s[0][1]), s[3])
-            for s in self._samples
-        ])
+        y_pred = np.array([self.poly_ridge.predict(s[0]) for s in self._samples])
         self.train_rmse = float(np.sqrt(np.mean((y_pred - y_raw) ** 2)))
         self.train_mgae = float(self._compute_mgae(y_pred, y_raw))
 
@@ -370,8 +554,7 @@ class CalibrationPipeline:
     ) -> np.ndarray:
         if not self.poly_ridge.is_fitted:
             return np.array([0.5, 0.5], dtype=np.float32)
-        pitch_rad = float(head_vec[0]) if head_vec is not None else 0.0
-        pred = self.poly_ridge.predict(float(gaze_2d[0]), float(gaze_2d[1]), pitch_rad)
+        pred = self.poly_ridge.predict(gaze_2d)
         if use_dynamic and head_vec is not None and len(self.dynamic) > 0:
             pred = self.dynamic.correct(pred, head_vec)
         return pred
@@ -383,8 +566,7 @@ class CalibrationPipeline:
         head_vec:  np.ndarray,
     ) -> None:
         if self.poly_ridge.is_fitted:
-            pitch_rad = float(head_vec[0]) if head_vec is not None else 0.0
-            predicted = self.poly_ridge.predict(float(gaze_2d[0]), float(gaze_2d[1]), pitch_rad)
+            predicted = self.poly_ridge.predict(gaze_2d)
         else:
             predicted = np.array([0.5, 0.5], dtype=np.float32)
         self.dynamic.add(screen_gt, predicted, head_vec)
@@ -410,22 +592,17 @@ class CalibrationPipeline:
         ey_list   = []
 
         for held_key, held_samples in groups.items():
-            af = TargetedPolyCalibration()
+            af = H1Calibration()
             for key, samples in groups.items():
                 if key == held_key:
                     continue
-                for gaze_2d, target, weight, pitch in samples:
-                    af.add(float(gaze_2d[0]), float(gaze_2d[1]),
-                           float(target[0]),  float(target[1]),
-                           weight, pitch_rad=pitch)
-            if len(af._raw) < 5:
+                for feat, target, weight, pitch in samples:
+                    af.add(feat, float(target[0]), float(target[1]), weight)
+            if len(af._feats) < 5:
                 continue
             af.fit()
 
-            preds = np.array([
-                af.predict(float(s[0][0]), float(s[0][1]), s[3])
-                for s in held_samples
-            ])
+            preds = np.array([af.predict(s[0]) for s in held_samples])
             pred_med  = np.median(preds, axis=0)
             target_pt = np.array(held_key)
             err       = pred_med - target_pt
@@ -458,7 +635,7 @@ class CalibrationPipeline:
         self._samples.clear()
         self._pitch_samples.clear()
         self._yaw_samples.clear()
-        self.poly_ridge = TargetedPolyCalibration()
+        self.poly_ridge = H1Calibration()
         self.dynamic    = DynamicCalibration()
         self.train_mgae = None
         self.train_rmse = None

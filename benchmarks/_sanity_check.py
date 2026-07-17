@@ -1,6 +1,7 @@
 """Quick import and API sanity check."""
 import sys
-sys.path.insert(0, '.')
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 print("=== Checking features.py ===")
 from features import (build_7d_features, extract_7d_from_image,

@@ -35,7 +35,9 @@ class GazeEstimator:
         if use_kalman:
             self._smoother = KalmanFilter2D(process_noise, measurement_noise)
         else:
-            self._smoother = OneEuroFilter2D(min_cutoff=1.5, beta=0.05)
+            # ユーザは追従より「震えない(平滑)」を優先(操作感)。beta を低く保つ。
+            # min_cutoff も下げて静止時をさらに平滑化(遅延は許容されている)。
+            self._smoother = OneEuroFilter2D(min_cutoff=1.0, beta=0.05)
         self._use_kalman = use_kalman
         self._last_proc_time: float = 0.0
 
@@ -78,9 +80,8 @@ class GazeEstimator:
             debug['head_delta_pitch'] = dp
             debug['head_delta_yaw']   = dy
 
-        if not head_ok:
-            return None, debug
-
+        # head_ok は HUD 用の助言フラグ。姿勢が外れても推定は止めない
+        # (止めるより劣化した値を出す方がマシ: |yaw|30°超でも5.8cm＜中央固定12.4cm)
         self._last_features  = features
         self._last_pitch_rad = pitch_rad
         self._last_yaw_rad   = yaw_rad

@@ -1,16 +1,22 @@
-@"
-.venv_eyetrax/
 .venv/
+.venv_eyetrax/
+.venv_eyetracker/
 venv/
 env/
 __pycache__/
 *.pyc
 archive/
 node_modules/
-EyeTracker/
 EyeTrax/
+EyeTracker/
 data/
 datasets/
+cache/
+# 生の視線録画(顔ランドマーク由来・プライバシー)と大きな中間データは公開しない
+logs/*.bin
+logs/*_landmarks.meta.json
+logs/*.npz
+logs/*_rich16d.npz
 *.pth
 *.pt
 *.h5
@@ -19,12 +25,9 @@ datasets/
 .env.*
 *.key
 *.pem
-.claude/
+.claude/*
+!.claude/settings.json
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-"@ | Set-Content -Encoding ascii .gitignore
-.venv_eyetraker/
-
-.venv_eyetracker/

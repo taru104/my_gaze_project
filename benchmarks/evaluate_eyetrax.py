@@ -29,10 +29,10 @@ from sklearn.preprocessing import StandardScaler
 # eyetrax の RidgeModel を直接使用 (MediaPipe不要)
 from eyetrax.models.ridge import RidgeModel
 
-PROJECT_DIR   = Path(__file__).parent
-CACHE_486D    = PROJECT_DIR / "sota_486d_cache.npz"
-CACHE_7D      = PROJECT_DIR / "sota_7d_cache.npz"
-RESULTS_PATH  = PROJECT_DIR / "eyetrax_comparison.txt"
+PROJECT_DIR   = Path(__file__).parent.parent
+CACHE_486D    = PROJECT_DIR / "cache" / "sota_486d_cache.npz"
+CACHE_7D      = PROJECT_DIR / "cache" / "sota_7d_cache.npz"
+RESULTS_PATH  = PROJECT_DIR / "results" / "eyetrax_comparison.txt"
 
 LAMBDA_BASE   = 0.473   # カスタムモデルのベースlambda
 Z_FACE_CM     = 50.0    # 固定仮定深度 (cm) ── 両モデル共通の公平条件

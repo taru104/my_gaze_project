@@ -56,11 +56,24 @@ my_gaze_project/
 ├── features.py               MediaPipe 特徴量抽出 + HeadFilter
 ├── calibration.py            AffineCalibration + 動的補正
 ├── filters.py                IQR / EMA / Kalman / One Euro フィルタ
-├── evaluate_new_pipeline.py  GazeCapture ベンチマーク（バッチ評価用）
 ├── face_landmarker.task      MediaPipe モデルファイル (3.6 MB)
 ├── logs/                     セッションごとの CSV ログ（自動生成）
 │   └── session_YYYYMMDD_HHMMSS.csv
-└── new_pipeline_results.txt  直近ベンチマーク結果
+├── benchmarks/                評価・ベンチマークスクリプト一式
+│   ├── evaluate_new_pipeline.py   GazeCaptureベンチマーク（現行パイプライン v2）
+│   ├── evaluate_sota.py           7D特徴量 + Ridge回帰の評価
+│   ├── evaluate_eyetrax.py        本家EyeTraxとの同一条件比較
+│   ├── evaluate_eyetracker_3d.py  Webcam3DTracker(PCA)移植版の評価
+│   ├── gazeCapture_calib_eval.py / gazeCapture_dataset.py / gazeCapture_validate.py
+│   ├── benchmark2〜4.py / benchmark_calibration.py  キャリブレーション手法比較
+│   ├── eval_accuracy.py / offline_eval.py / analyze_sessions*.py
+│   └── _check_ckpt.py / _sanity_check.py  デバッグ用
+├── results/                   ベンチマーク結果・ログ出力 (*.txt)
+├── cache/                     GazeCapture特徴量キャッシュ (*.npz, git管理外)
+├── legacy/                    旧DNNアプローチ (model.py, train.py, gaze_model.pth) ※未使用
+├── _review/                   要確認の不要ファイル置き場（削除前レビュー用）
+├── EyeTrax/ , EyeTracker/     比較用に取得した外部リポジトリ（git管理外）
+└── archive/                   GazeCaptureデータセット展開先（git管理外, 23GB）
 ```
 
 ---

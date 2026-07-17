@@ -2,8 +2,11 @@
 ノイズレベルを変えて各戦略のロバスト性を比較。
 実データのtrain_MGAE=14-15°から逆算すると実効ノイズσ≈0.05-0.15。
 """
+import sys
+from pathlib import Path
 import numpy as np
 from collections import defaultdict
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from calibration import AffineCalibration, PolyRidgeCalibration, CALIB_POINTS_9
 
 SCREEN_CM_W = 30.9; SCREEN_CM_H = 17.4

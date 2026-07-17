@@ -36,10 +36,10 @@ from pathlib import Path
 
 # ──── Configuration ────────────────────────────────────────────────────────────
 
-PROJECT_DIR   = Path(__file__).parent
+PROJECT_DIR   = Path(__file__).parent.parent
 ARCHIVE_DIR   = PROJECT_DIR / 'archive'
 MODEL_PATH    = PROJECT_DIR / 'face_landmarker.task'
-RESULTS_PATH  = PROJECT_DIR / 'eyetracker_3d_results.txt'
+RESULTS_PATH  = PROJECT_DIR / 'results' / 'eyetracker_3d_results.txt'
 
 # Screen mapping constants (from MonitorTracking.py, unchanged)
 YAW_DEGREES   = 15.0   # +/-15 deg left/right -> screen width

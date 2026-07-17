@@ -8,8 +8,11 @@
 
 解決策: キャリブ点ごとにメジアンを1点計算してから9点でフィット。
 """
+import sys
+from pathlib import Path
 import numpy as np
 from collections import defaultdict
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from calibration import AffineCalibration, PolyRidgeCalibration, CALIB_POINTS_9
 
 SCREEN_CM_W = 30.9

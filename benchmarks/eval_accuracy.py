@@ -25,6 +25,7 @@ import cv2
 from pathlib import Path
 from typing import Optional, Tuple, List
 
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from estimator   import GazeEstimator
 from calibration import CALIB_POINTS_9
 
@@ -334,7 +335,7 @@ class EvalApp:
         print("\n" + report)
 
         # ファイル保存
-        out_path = Path(__file__).parent / f"eval_results_{time.strftime('%Y%m%d_%H%M%S')}.txt"
+        out_path = Path(__file__).parent.parent / 'results' / f"eval_results_{time.strftime('%Y%m%d_%H%M%S')}.txt"
         out_path.write_text(report, encoding='utf-8')
         print(f"\n[SAVED] {out_path}")
 

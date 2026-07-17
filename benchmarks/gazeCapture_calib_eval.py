@@ -17,12 +17,13 @@ from mediapipe.tasks.python.core.base_options import BaseOptions
 from pathlib import Path
 from collections import defaultdict
 
-sys.path.insert(0, str(Path(__file__).parent))
+ROOT_DIR = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT_DIR))
 from gazeCapture_dataset import GazeCaptureRawIndex
 from gazeCapture_validate import extract_7d
 from calibration import TargetedPolyCalibration
 
-PROJECT_DIR   = Path(__file__).parent
+PROJECT_DIR   = ROOT_DIR
 ARCHIVE_DIR   = PROJECT_DIR / 'archive'
 MODEL_PATH    = PROJECT_DIR / 'face_landmarker.task'
 

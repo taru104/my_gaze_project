@@ -28,19 +28,20 @@ from mediapipe.tasks.python import vision as mp_vision
 from mediapipe.tasks.python.core.base_options import BaseOptions
 from pathlib import Path
 
+ROOT_DIR     = Path(__file__).parent.parent
 PROJECT_DIR  = Path(__file__).parent
-sys.path.insert(0, str(PROJECT_DIR))
+sys.path.insert(0, str(ROOT_DIR))
 
 from features            import extract_7d_from_image
 from calibration         import RidgeCalibration
 from gazeCapture_dataset import GazeCaptureRawIndex, SPLIT_CODE
 
-ARCHIVE_DIR  = PROJECT_DIR / 'archive'
-MODEL_PATH   = PROJECT_DIR / 'face_landmarker.task'
-CACHE_PATH   = PROJECT_DIR / 'sota_7d_cache.npz'
-RESULTS_PATH = PROJECT_DIR / 'sota_results.txt'
+ARCHIVE_DIR  = ROOT_DIR / 'archive'
+MODEL_PATH   = ROOT_DIR / 'face_landmarker.task'
+CACHE_PATH   = ROOT_DIR / 'cache' / 'sota_7d_cache.npz'
+RESULTS_PATH = ROOT_DIR / 'results' / 'sota_results.txt'
 
-CHECKPOINT_PATH  = PROJECT_DIR / 'sota_7d_checkpoint.npz'
+CHECKPOINT_PATH  = ROOT_DIR / 'cache' / 'sota_7d_checkpoint.npz'
 CHECKPOINT_EVERY = 3_000
 
 LAMBDA_REG = 0.473   # SOTAハイパーパラメータ最適化値

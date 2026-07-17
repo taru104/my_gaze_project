@@ -18,6 +18,7 @@ from collections import deque
 from typing import Optional, Tuple
 
 from filters import OneEuroFilterND
+from rich16d import rich_16d_from_lms, lms_to_array
 
 # ─── 解剖学的ランドマークインデックス ─────────────────────────────────────────
 LEFT_INNER_CANTHUS  = 362
@@ -205,6 +206,11 @@ class GazeFeatureExtractor:
         # 頭部姿勢フィルタ (rvec 3D + tvec 3D = 6D)
         self._head_filter = OneEuroFilterND(6, min_cutoff=0.3, beta=0.01)
 
+        # solvePnP の前フレーム解 (時間連続性で pitch±90°フリップを抑制)
+        # NotebookLM Q9: useExtrinsicGuess=True で前フレームR,tを初期値に与える。
+        self._prev_rvec: Optional[np.ndarray] = None
+        self._prev_tvec: Optional[np.ndarray] = None
+
     def extract(self, frame: np.ndarray) -> Tuple[Optional[np.ndarray], Optional[dict]]:
         """
         フレームから gaze_2d = [X_feat, Y_feat] を抽出する。
@@ -240,12 +246,24 @@ class GazeFeatureExtractor:
         # ── solvePnP for head pose (HeadFilter 適用) ─────────────────────────
         face_2d = np.array([[lms[i].x * w, lms[i].y * h] for i in _FACE_2D_IDX],
                             dtype=np.float64)
-        ok, rvec_raw, tvec_raw = cv2.solvePnP(
-            _FACE_3D_MODEL, face_2d, cam, _DIST_COEFFS,
-            flags=cv2.SOLVEPNP_ITERATIVE,
-        )
+        # 前フレーム解を初期値に使い時間連続性を強制 (pitch±90°フリップ抑制)
+        if self._prev_rvec is not None:
+            ok, rvec_raw, tvec_raw = cv2.solvePnP(
+                _FACE_3D_MODEL, face_2d, cam, _DIST_COEFFS,
+                rvec=self._prev_rvec.copy(), tvec=self._prev_tvec.copy(),
+                useExtrinsicGuess=True, flags=cv2.SOLVEPNP_ITERATIVE,
+            )
+        else:
+            ok, rvec_raw, tvec_raw = cv2.solvePnP(
+                _FACE_3D_MODEL, face_2d, cam, _DIST_COEFFS,
+                flags=cv2.SOLVEPNP_ITERATIVE,
+            )
         if not ok:
+            self._prev_rvec = self._prev_tvec = None
             return None, None
+        # 次フレーム用に保存
+        self._prev_rvec = rvec_raw.copy()
+        self._prev_tvec = tvec_raw.copy()
 
         head_raw    = np.concatenate([rvec_raw.flatten(), tvec_raw.flatten()])
         head_smooth = self._head_filter.update(head_raw, dt_s)
@@ -301,6 +319,17 @@ class GazeFeatureExtractor:
         thr   = float(np.mean(self._ear_hist)) * 0.8 if len(self._ear_hist) >= 15 else 0.2
         blink = ear < thr
 
+        # ── キャリブ/推定に渡す特徴 = 7D(目頭・目尻基準の両眼虹彩+頭部姿勢) ──────
+        # 旧実装は gaze_2d=[X_feat,Y_feat](画像中心基準)を返し、顔の平行移動を
+        # 視線と誤認して実測 loo 9.7cm だった。7D は目頭・目尻基準で頭の移動に不変。
+        # rich16d の [:7] と厳密一致(オフライン評価と同じ数式)＝検証した精度が再現する。
+        # 上の X_feat/Y_feat/pitch 等は HUD・CSVログ互換のため debug に残す。
+        lms_arr = lms_to_array(lms)
+        feat16 = rich_16d_from_lms(lms_arr, w, h)
+        if feat16 is None:
+            return None, None
+        feat7d = feat16[:7].astype(np.float32)
+
         debug = {
             'pitch_rad':      pitch,
             'yaw_rad':        yaw,
@@ -316,8 +345,9 @@ class GazeFeatureExtractor:
             'Z_iris_R_mm':    float(Z_iris_R),
             'iris_diam_L_px': float(L_diam),
             'iris_diam_R_px': float(R_diam),
+            'feat7d':         feat7d,
         }
-        return gaze_2d, debug
+        return feat7d, debug
 
     def close(self):
         self._landmarker.close()

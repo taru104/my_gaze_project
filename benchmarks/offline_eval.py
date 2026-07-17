@@ -2,8 +2,11 @@
 session_175045.csv の実キャリブデータを使ってオフラインで手法比較。
 CSV に X_feat/Y_feat が入っているので実データで評価できる。
 """
-import csv, numpy as np
+import csv, sys
+import numpy as np
+from pathlib import Path
 from collections import defaultdict
+sys.path.insert(0, str(Path(__file__).parent.parent))
 from calibration import AffineCalibration, PolyRidgeCalibration
 
 CSV = r'C:\Users\hazib\my_gaze_project\logs\session_20260508_175045.csv'
