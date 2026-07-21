@@ -596,7 +596,10 @@ class CalibrationPipeline:
             for key, samples in groups.items():
                 if key == held_key:
                     continue
-                for feat, target, weight, pitch in samples:
+                # 各点フレームを間引いて H1 fit を高速化(キャリブ後の数秒固まりを解消)。
+                # 多姿勢でも代表~80点あれば LOO 表示は十分正確。
+                step = max(1, len(samples) // 80)
+                for feat, target, weight, pitch in samples[::step]:
                     af.add(feat, float(target[0]), float(target[1]), weight)
             if len(af._feats) < 5:
                 continue

@@ -80,8 +80,9 @@ class RawLandmarkLogger:
             lm[i, 0] = p.x; lm[i, 1] = p.y; lm[i, 2] = p.z
         buf[HEADER:] = lm.ravel()
         self._f.write(buf.tobytes())
-        self._f.flush()   # クラッシュしても直前フレームまで残す
         self._n += 1
+        if self._n % 30 == 0:
+            self._f.flush()   # 30フレーム(約1秒)毎にflush。毎フレームのディスク同期を避けfps確保
 
     @property
     def n_written(self) -> int:
