@@ -11,6 +11,9 @@ EyeTrax/
 EyeTracker/
 data/
 datasets/
+# 外部データセット(非商用ライセンス・大容量) は公開しない
+MPIIFaceGaze/
+*.zip
 cache/
 # 生の視線録画(顔ランドマーク由来・プライバシー)は一切公開しない
 logs/
