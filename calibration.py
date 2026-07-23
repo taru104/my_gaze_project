@@ -409,6 +409,59 @@ class H1Calibration:
         self._weights.clear()
 
 
+class HybridCalibration:
+    """正面=7D H1, 横向き=16D Huber を |yaw| 閾値でハード切替。キャリブで両方を並列学習。
+    ユーザ要望(2026-07-22): 正面の使用感(H1 実機1.4cm)を保ちつつ、横向きは16Dで崩れにくく。
+    入力 feat は16D。7D側は feat[:7] を使う。切替は feat[5]=yaw(rad)。"""
+
+    def __init__(self, yaw_thresh_deg: float = 10.0):
+        self._h1  = H1Calibration()      # 正面用(7D)
+        self._h16 = HuberCalibration()   # 横向き用(16D)
+        self._thr = np.radians(yaw_thresh_deg)
+        self._yaws: List[float] = []
+        self._ref = 0.0
+        self._is_fitted = False
+
+    def add(self, feat: np.ndarray, x_norm: float, y_norm: float, weight: float = 1.0) -> None:
+        feat = np.asarray(feat, dtype=np.float64).ravel()
+        self._yaws.append(abs(float(feat[5])))           # キャリブ姿勢の基準yawを収集
+        self._h1.add(feat[:7], x_norm, y_norm, weight)   # 7D側にも
+        self._h16.add(feat,    x_norm, y_norm, weight)   # 16D側にも(両方=並列学習)
+
+    def fit(self) -> None:
+        self._h1.fit()
+        self._h16.fit()
+        # キャリブ姿勢の代表|yaw|。ユーザの正面がyaw=0でなくても、ここを基準に切替する。
+        self._ref = float(np.median(self._yaws)) if self._yaws else 0.0
+        self._is_fitted = True
+
+    def predict(self, feat: np.ndarray) -> np.ndarray:
+        feat = np.asarray(feat, dtype=np.float64).ravel()
+        # キャリブ姿勢(ref)からの |Δyaw| で切替。ユーザの正面がyaw=0でなくても正しく効く。
+        if abs(abs(float(feat[5])) - self._ref) < self._thr:   # キャリブ姿勢の近く = 正面 → 7D H1
+            return self._h1.predict(feat[:7])
+        return self._h16.predict(feat)          # キャリブ姿勢から離れた = 横向き → 16D Huber
+
+    @property
+    def is_fitted(self) -> bool:
+        return self._is_fitted
+
+    @property
+    def _feats(self):     # _compute_loo のサンプル数判定用(16D側に委譲)
+        return self._h16._feats
+
+    @property
+    def _ridge_x(self):   # kappa_offset_norm 互換(7D側のintercept)
+        return self._h1._ridge_x
+
+    @property
+    def _ridge_y(self):
+        return self._h1._ridge_y
+
+    def reset(self) -> None:
+        self._h1.reset(); self._h16.reset(); self._yaws.clear(); self._ref = 0.0; self._is_fitted = False
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 
 @dataclass
@@ -485,10 +538,16 @@ class CalibrationPipeline:
     # 外れても estimator は推定を続ける(劣化するが止まらない)。
     HEAD_POSE_TOLERANCE_RAD: float = np.radians(20.0)
 
-    def __init__(self):
-        # poly_ridge の名前は後方互換で維持(kappa_offset_norm 等が参照)。
-        # 中身は16D/7D非依存の RidgeCalibration。入力特徴の次元は features 側が決める。
-        self.poly_ridge = H1Calibration()
+    def __init__(self, mode: str = '7d', yaw_thresh_deg: float = 10.0):
+        # config.MODE から。'7d'=H1(正面特化), '16d'=Huber(横向き改善), 'hybrid'=姿勢で両方切替。
+        self._mode = mode
+        self._yaw_thr = yaw_thresh_deg
+        if mode == 'hybrid':
+            self.poly_ridge = HybridCalibration(yaw_thresh_deg)
+        elif mode == '16d':
+            self.poly_ridge = HuberCalibration()
+        else:
+            self.poly_ridge = H1Calibration()
         self.dynamic    = DynamicCalibration()
         self._samples:       List[Tuple] = []
         self._pitch_samples: List[float] = []
@@ -592,7 +651,12 @@ class CalibrationPipeline:
         ey_list   = []
 
         for held_key, held_samples in groups.items():
-            af = H1Calibration()
+            if self._mode == 'hybrid':
+                af = HybridCalibration(self._yaw_thr)
+            elif self._mode == '16d':
+                af = HuberCalibration()
+            else:
+                af = H1Calibration()
             for key, samples in groups.items():
                 if key == held_key:
                     continue
@@ -638,7 +702,12 @@ class CalibrationPipeline:
         self._samples.clear()
         self._pitch_samples.clear()
         self._yaw_samples.clear()
-        self.poly_ridge = H1Calibration()
+        if self._mode == 'hybrid':
+            self.poly_ridge = HybridCalibration(self._yaw_thr)
+        elif self._mode == '16d':
+            self.poly_ridge = HuberCalibration()
+        else:
+            self.poly_ridge = H1Calibration()
         self.dynamic    = DynamicCalibration()
         self.train_mgae = None
         self.train_rmse = None

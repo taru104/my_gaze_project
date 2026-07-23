@@ -31,6 +31,11 @@ _review/
 !.claude/settings.json
 # 内部開発メモ(公開しない・ローカルで継続利用する再開ノート)
 RESUME.md
+# 応募書類・個人情報(氏名/学校等) は絶対に公開しない
+*.docx
+*.pdf
+＜学生AIリーダーズ会議2026＞エントリーシート・記入例/
+学生AIリーダーズ_応募書_Tgaze_ドラフト.docx
 .vscode/
 .idea/
 .DS_Store

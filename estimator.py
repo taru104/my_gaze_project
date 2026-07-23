@@ -10,6 +10,7 @@ from typing import Optional, Tuple
 from features    import GazeFeatureExtractor
 from filters     import KalmanFilter2D, OneEuroFilter2D
 from calibration import CalibrationPipeline
+from config      import MODE, HYBRID_YAW_THRESH_DEG
 
 
 class GazeEstimator:
@@ -41,7 +42,7 @@ class GazeEstimator:
         self._use_kalman = use_kalman
         self._last_proc_time: float = 0.0
 
-        self.calibration = CalibrationPipeline()
+        self.calibration = CalibrationPipeline(mode=MODE, yaw_thresh_deg=HYBRID_YAW_THRESH_DEG)
 
         self._last_features:  Optional[np.ndarray] = None
         self._last_raw_pred:  Optional[np.ndarray] = None

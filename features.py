@@ -19,6 +19,7 @@ from typing import Optional, Tuple
 
 from filters import OneEuroFilterND
 from rich16d import rich_16d_from_lms, lms_to_array
+from config import MODE
 
 # ─── 解剖学的ランドマークインデックス ─────────────────────────────────────────
 LEFT_INNER_CANTHUS  = 362
@@ -252,6 +253,8 @@ class GazeFeatureExtractor:
         if feat16 is None:
             return None, None
         feat7d = feat16[:7].astype(np.float32)
+        # config.MODE で特徴を切替。'7d'=7D、'16d'/'hybrid'=16D(hybridは7Dも内部で使うので16Dを渡す)。
+        out_feat = feat7d if MODE == '7d' else feat16.astype(np.float32)
         pitch  = float(feat16[4]); yaw = float(feat16[5]); roll = float(feat16[7])
 
         # ── 虹彩中心 + 直径 (EyeFilter 適用) ────────────────────────────────
@@ -312,7 +315,7 @@ class GazeFeatureExtractor:
             'iris_diam_R_px': float(R_diam),
             'feat7d':         feat7d,
         }
-        return feat7d, debug
+        return out_feat, debug
 
     def close(self):
         self._landmarker.close()
