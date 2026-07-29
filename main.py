@@ -39,11 +39,26 @@ SCREEN_CM_H = 17.4    # 画面の物理縦幅 (cm)
 class GazeApp:
     """視線推定アプリ本体。"""
 
-    def __init__(self, cam_id: int = 0, win_w: int = 1280, win_h: int = 720):
+    def __init__(self, cam_id: int = 0, win_w: int = 1280, win_h: int = 720,
+                 use_appearance: Optional[bool] = None):
         self.win_w = win_w
         self.win_h = win_h
 
-        self.estimator = GazeEstimator()
+        # 推定器の選択: 画像クリップ版(16D幾何+目パッチPCA16, 実機で暴走しにくい) か 16D幾何のみか。
+        # 既定は config.USE_APPEARANCE。引数 use_appearance で上書き可(main_16d.py 等)。
+        if use_appearance is None:
+            try:
+                from config import USE_APPEARANCE
+                use_appearance = USE_APPEARANCE
+            except Exception:
+                use_appearance = False
+        self._use_appearance = bool(use_appearance)
+        if self._use_appearance:
+            from estimator_appearance import AppearanceEstimator
+            self.estimator = AppearanceEstimator()
+        else:
+            self.estimator = GazeEstimator()
+
         self.cap = cv2.VideoCapture(cam_id)
         if not self.cap.isOpened():
             raise RuntimeError(f"カメラ {cam_id} を開けません。")
@@ -331,6 +346,10 @@ class GazeApp:
 
     def _draw_hud(self, canvas: np.ndarray, debug: Optional[dict]):
         w, h = self.win_w, self.win_h
+
+        if getattr(self, '_use_appearance', False):
+            cv2.putText(canvas, "APPEARANCE (image-clip)", (w // 2 - 150, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 200, 255), 2)
 
         cv2.putText(canvas, f"FPS: {self._fps:.1f}",
                     (w - 140, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, C_TEXT, 1)

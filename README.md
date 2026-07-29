@@ -19,77 +19,85 @@
 
 Tgaze estimates **where you look on screen** using only a laptop webcam — no infrared, no headset, no GPU.
 
-- 🎯 **1.4 cm** at screen center *(personal 9-point calibration)*
-- 🌍 **5.3 cm** for a **completely unseen person, zero calibration** *(person-independent on MPIIFaceGaze, 15 subjects)*
-- 🪶 **CPU, real-time** — MediaPipe FaceLandmarker + scikit-learn
-- 🔒 **Private by design** — everything runs locally
+Most people who want gaze tracking want exactly this: **the point on the screen you're looking at.** The few open webcam options (WebGazer, EyeTrax) give that, but coarsely (several cm and up) and they jump around under head motion. Tgaze targets **near-hardware accuracy and *usable stability* from commodity hardware**, with **generalization (works for anyone)** treated as a first-class goal.
 
-Existing webcam gaze libraries (e.g. WebGazer.js) are easy but coarse (several cm–10 cm+) and fragile to head motion. Tgaze targets **near-hardware accuracy from commodity hardware**, and treats **generalization (works for anyone)** as a first-class goal — not an afterthought.
+- 🎯 **~1.3–1.6 cm** at screen center, live webcam *(personal 9-point calibration)*
+- 👥 **~2 cm** for a **friend who had never used it before** *(live, 9-point)*
+- 🪶 **CPU, real-time** — MediaPipe FaceLandmarker + scikit-learn (no deep net at runtime)
+- 🧊 **Stable, not just accurate** — the default model fuses eye geometry with a compressed eye-image patch, which roughly **halves wild off-screen jumps** vs geometry alone
+- 🔒 **Private by design** — everything runs locally; nothing is uploaded
 
 ## 📊 Key results
 
-**Personal accuracy** — single user, leave-one-point-out:
+**Personal accuracy** — live webcam, leave-one-point-out (the on-screen HUD number):
 
-| Condition | Median error |
-|---|---:|
-| Center, still head | **1.4 cm** |
-| All head poses (multi-pose calibration) | 4.5 cm |
+| Model | Median error | Off-screen jump rate |
+|---|---:|---:|
+| Geometry only (16-D) | **1.6 cm** | ~12 % |
+| **Geometry + eye-image (default)** | 1.3 – 2.1 cm | **~4–6 %** |
 
-**Generalization** — MPIIFaceGaze, 15 subjects, person-independent:
+> The two models trade places depending on what you measure. Geometry alone often wins the *point-accuracy* number by a hair, but the eye-image model is far **steadier in real use** — it flings the cursor off-screen about **half as often**. In side-by-side testing the eye-image version simply *felt* better to use, and the logs confirmed it (details below). **That's why it is the default.**
+
+**Generalization** — MPIIFaceGaze, 15 subjects, offline, honest splits:
 
 | Setting | Median error |
 |---|---:|
-| Unseen person, **zero calibration** | 5.3 cm |
-| Unseen person, 50-point affine adaptation | 4.6 cm |
-| Personal upper bound (same person) | 4.0 cm |
+| Unseen person, **zero calibration** | ~6 cm |
+| Same person, calibrated (geometry) | ~4.0 cm |
+| Same person, calibrated (**+ eye-image**) | **~4.5 cm***  |
 
-> The gap between "unseen person" (5.3) and "same person" (4.0) is only **~1.3 cm** — a model trained on *other people* already works well on *you*. That's the core evidence that True Gaze can be **universal**.
+<sub>*Verified with strict time-based / block splits and leave-one-person-out — the eye-image gain survives the hard evaluations, so it is real signal, not train/test leakage.</sub>
 
-## 🔍 How it works — and the one insight that unlocked it
+## 🔍 How it works — and two insights that shaped it
 
 ```
 webcam frame
-  └─ MediaPipe FaceLandmarker  (478 landmarks + iris)
-       └─ 7D geometric feature:
-            [ L-iris(x,y), R-iris(x,y), pitch, yaw, distance ]
-            iris normalized to each eye's corners  →  distance-invariant
-       └─ H1 calibration:
-            base    = 2nd-order polynomial   (iris → screen point)
-            correct = 2nd-order polynomial   (head pose → residual)
-       └─ One-Euro filter  →  smooth on-screen gaze point
+  └─ MediaPipe FaceLandmarker (478 landmarks + iris)
+       ├─ 16-D geometric feature
+       │    iris(x,y) L/R, head pitch/yaw/roll, inter-eye distance,
+       │    eye-openness, iris vertical position, iris size, iris aspect
+       │    (iris normalized to each eye's corners → distance/translation invariant)
+       └─ (default) eye-image patch
+            each eye warped to a canonical 48×32 crop by its corners,
+            CLAHE contrast-normalized, compressed to 16 PCA components
+       └─ Huber regression (robust) → on-screen point
+       └─ One-Euro filter → smooth gaze cursor
 ```
 
-**The bug that unlocked everything.** An early version normalized the iris against the **image center**, which quietly turned the feature into a *face-position sensor* — its correlation with head location was **0.98**, while its correlation with actual gaze was only 0.48. Switching to **eye-corner normalization** made the feature distance- and translation-invariant and cut center error from **~9 cm → 1.4 cm**.
+**Insight 1 — the bug that unlocked accuracy.** An early feature normalized the iris against the **image center**, quietly turning it into a *face-position sensor*: its correlation with head location was **0.98**, with actual gaze only **0.48**. Switching to **eye-corner normalization** made it distance- and translation-invariant and cut center error from **~9 cm → ~1.4 cm**. *The iris carries the gaze signal; head pose is only a correction term.*
 
-The principle: **the iris carries the gaze signal; head pose is only a correction term.**
+**Insight 2 — the metric and the feel disagreed, and the feel was right.** Adding the eye-image patch *slightly hurt* the point-accuracy number in some sessions, so by the number alone you'd reject it. But in hands-on use it was noticeably more stable, so I logged both versions and measured the real culprit — **wild off-screen jumps** — and found the eye-image model cut them roughly in half. A single offline metric can miss what actually makes a tool usable; the eye-image model shipped as the default because it *behaves* better, and the logs backed that up. *(A new user — a friend testing it cold — reproduced the same preference and ~2 cm accuracy.)*
 
 ## 🚀 Quick start
 
 ```bash
 pip install -r requirements.txt
-python main.py
+python main.py            # default: geometry + eye-image (steadier)
+python main_16d.py        # geometry only (the leaner baseline)
 ```
 
 | Key | Action |
 |---|---|
-| `C` | Calibrate (look at each of 9 dots, keep head still) |
+| `C` | Calibrate — follow the dot through **9 points, clockwise** (easy to track on first try) |
 | `M` | Multi-pose calibrate (look at each dot while slowly rotating your head) |
 | `R` / `Q` | Reset / Quit |
 
-The top-left preview shows a live **head-pose arrow** so you can see the tracked pose in real time.
+The top-left preview shows a live **head-pose arrow**; the HUD shows a leave-one-out **cm error** so you can compare setups. Switch the default in `config.py` (`USE_APPEARANCE`).
 
 ## 🧪 Method & reproduction (research notes)
 
-- **Feature (`features.py`, `rich16d.py`)** — 7D: both-eye iris positions normalized to eye corners (distance/translation invariant) + head pose (pitch/yaw) + inter-eye distance.
-- **Calibration (`calibration.py`, `H1Calibration`)** — a classic iris→screen 2nd-order polynomial, plus a 2nd-order head-pose correction on the residual. No deep net; runs instantly on CPU.
-- **Generalization (`benchmarks/`)** — trained a person-independent model on **MPIIFaceGaze** (15 subjects) with the *same* 7D features, evaluated leave-one-person-out. Transfers to a new camera/person with a light affine adaptation (absolute screen geometry differs per setup; the gaze *structure* transfers).
-- All numbers above are reproducible from the scripts in `benchmarks/`.
+- **Features** (`features.py`, `rich16d.py`) — 16-D geometry: both-eye iris positions normalized to eye corners + head pose + eye-openness / iris size / iris aspect. `appearance.py` adds the canonical eye-image patch → PCA-16.
+- **Calibration** (`calibration.py`, `appearance.py`) — robust Huber regression on the fused feature. No deep net; fits instantly on CPU. Optional tap-based dynamic correction.
+- **Why not more dimensions?** Extensive ablations (`experiments/`) show that *adding hand-crafted features to the 16-D vector saturates*, and that raising the eye-image resolution helps **only** when tightly PCA-compressed — more raw dimensions overfit on a sparse calibration. Overfitting was the constant adversary, so every gain is checked person-independently.
+- **Generalization** (`benchmarks/`) — person-independent evaluation on **MPIIFaceGaze** (15 subjects) with the same features; the gaze structure transfers to a new camera/person (absolute screen geometry is handled by the light per-user calibration).
+- Numbers above come from live sessions and the scripts in `benchmarks/` + `experiments/`.
 
 ## 🗺️ Roadmap
 
-- [ ] **Calibration-light onboarding** — ship "generic base + few-tap affine" so a new user works in seconds.
-- [ ] **Wide-angle robustness** — ETH-XGaze (±80° head poses) to strengthen extreme yaw.
-- [ ] **Synthetic data pipeline** — Blender-rendered faces with ground-truth gaze (commercial-friendly, unlimited poses).
+- [x] Real-webcam validation on a second person (cold first-time user).
+- [ ] **Denser / continuous calibration** — give the eye-image model enough gaze coverage to also win the point-accuracy number, not just stability.
+- [ ] **Save eye-crops during use** (privacy-scoped) so the eye-image model can be tuned on real sessions, not just MPIIFaceGaze.
+- [ ] **Calibration-light onboarding** — generic base + a few taps so a new user works in seconds.
 - [ ] pip package + demo GIF & hosted playground.
 
 ## 📚 Citation
@@ -110,5 +118,5 @@ The top-left preview shows a live **head-pose arrow** so you can see the tracked
 ## Acknowledgments
 
 - Built on [MediaPipe](https://developers.google.com/mediapipe) FaceLandmarker.
-- Inspired by the [EyeTrax](https://github.com/ck-zhang/eyetrax) and [GazeTracking](https://github.com/antoinelame/GazeTracking) open-source projects.
+- Compared against the [EyeTrax](https://github.com/ck-zhang/eyetrax) and [GazeTracking](https://github.com/antoinelame/GazeTracking) open-source projects.
 - Research used **MPIIFaceGaze** (Zhang et al., CVPRW 2017; research license) and draws on **GazeCapture** and **ETH-XGaze**. These research datasets are **not** used in any commercial build.
