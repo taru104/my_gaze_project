@@ -4,6 +4,12 @@
   <b>True Gaze</b> — accurate, calibration-light eye tracking from a single webcam.
 </p>
 
+https://github.com/user-attachments/assets/b87e13b7-bd6f-421d-bcb7-b413bd32e0a4
+
+
+
+
+
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.10+-blue.svg" alt="python">
   <img src="https://img.shields.io/badge/backbone-MediaPipe-orange.svg" alt="mediapipe">
