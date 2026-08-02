@@ -14,8 +14,9 @@ from rich16d import rich_16d_from_lms, lms_to_array
 class AppearanceEstimator:
     """16D幾何 + 目パッチ(48x32 CLAHE)PCA16 の視線推定。I/F は GazeEstimator と一致。"""
 
-    def __init__(self):
-        self._extractor = GazeFeatureExtractor()
+    def __init__(self, video: bool = True):
+        # video=False は「連続していない静止画を1枚ずつ独立に処理する」用途(バッチ評価)。
+        self._extractor = GazeFeatureExtractor(video=video)
         self._smoother = OneEuroFilter2D(min_cutoff=1.0, beta=0.05)
         self.calibration = AppearancePipeline(n_pca=16)
 

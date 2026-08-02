@@ -188,10 +188,16 @@ class GazeFeatureExtractor:
         虹彩変位と虹彩直径がどちらも 1/Z に比例 → Z がキャンセル
     """
 
-    def __init__(self, ear_history_len: int = 50):
+    def __init__(self, ear_history_len: int = 50, video: bool = True):
+        # video=True(既定, 実機と同じ): VIDEO mode。フレーム間で追跡状態を持ち安定する。
+        # video=False: IMAGE mode。**連続していない静止画**を1枚ずつ独立に処理する用途
+        #   (バッチ評価・データセット処理)。VIDEO mode に無関係な静止画を流すと追跡状態が
+        #   前の画像に引きずられ、精度が落ちる上に呼び出し順で結果が変わる。
+        self._video = bool(video)
         options = mp_vision.FaceLandmarkerOptions(
             base_options=BaseOptions(model_asset_path=_MODEL_PATH),
-            running_mode=mp_vision.RunningMode.VIDEO,
+            running_mode=(mp_vision.RunningMode.VIDEO if self._video
+                          else mp_vision.RunningMode.IMAGE),
             num_faces=1,
             min_face_detection_confidence=0.5,
             min_face_presence_confidence=0.5,
@@ -229,7 +235,8 @@ class GazeFeatureExtractor:
         ts_ms            = int((_time.time() - self._start_time) * 1000)
         ts_ms            = max(ts_ms, prev_ts_ms + 1)
         self._last_ts_ms = ts_ms
-        result           = self._landmarker.detect_for_video(mp_img, ts_ms)
+        result           = (self._landmarker.detect_for_video(mp_img, ts_ms) if self._video
+                            else self._landmarker.detect(mp_img))
 
         dt_s = float(np.clip((ts_ms - prev_ts_ms) / 1000.0, 1.0/120.0, 0.5)) \
                if prev_ts_ms >= 0 else 1.0 / 30.0

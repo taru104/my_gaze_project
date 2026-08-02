@@ -30,8 +30,10 @@ class GazeEstimator:
         use_kalman:        bool  = False,
         process_noise:     float = 1e-3,
         measurement_noise: float = 1e-4,
+        video:             bool  = True,
     ):
-        self._extractor = GazeFeatureExtractor()
+        # video=False は「連続していない静止画を1枚ずつ独立に処理する」用途(バッチ評価)。
+        self._extractor = GazeFeatureExtractor(video=video)
 
         if use_kalman:
             self._smoother = KalmanFilter2D(process_noise, measurement_noise)
