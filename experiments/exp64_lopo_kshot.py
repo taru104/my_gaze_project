@@ -95,36 +95,55 @@ def adapt(base_cal, y_cal, base_te, k):
 KS = [0, 1, 3, 5, 9, 16, 45, 100]
 SEEDS = 5
 log(f"\n## 2. LOPO k-shot（EMC-Gaze 2026 と同一プロトコル）  n={len(X16)}, {len(pids)}人\n")
+log("EMC-Gaze 論文の指標は **subject-macro angular RMSE**（各被験者のRMSEを15人で平均±標準偏差）。")
+log("中央値は外れフレームに強く出る値が小さくなるため、比較には必ず RMSE 側を使うこと。両方載せる。\n")
 
+FINAL = {}
 for npca, name in [(0, "16D幾何のみ"), (16, "16D+目パッチPCA16 (既定)")]:
-    res_cm = {k: [] for k in KS}; res_dg = {k: [] for k in KS}
+    res_cm = {k: [] for k in KS}; res_md = {k: [] for k in KS}; res_rm = {k: [] for k in KS}
     for p in pids:
         te_all = np.where(pid == p)[0]; tr = np.where(pid != p)[0]
         gm = global_model(tr, npca)
         base_all = gm(te_all)                       # グローバル予測(1回だけ計算し使い回す)
         for k in KS:
-            cms, dgs = [], []
+            cms, mds, rms = [], [], []
             for s in range(SEEDS if k > 0 else 1):
                 rs = np.random.RandomState(1000 * s + 7)
                 cal = rs.choice(len(te_all), k, replace=False) if k else np.array([], int)
                 mask = np.ones(len(te_all), bool); mask[cal] = False
                 te = te_all[mask]
                 pr = adapt(base_all[cal], y[te_all[cal]], base_all[mask], k)
-                cms.append(np.median(err_cm(pr, te))); dgs.append(np.median(err_deg(pr, te)))
-            res_cm[k].append(np.median(cms)); res_dg[k].append(np.median(dgs))
+                dg = err_deg(pr, te)
+                cms.append(np.median(err_cm(pr, te)))
+                mds.append(np.median(dg))
+                rms.append(float(np.sqrt(np.mean(dg ** 2))))     # この被験者の角度RMSE
+            res_cm[k].append(np.median(cms)); res_md[k].append(np.median(mds))
+            res_rm[k].append(np.mean(rms))
         print(f"  [{name}] {p} 完了", flush=True)
     log(f"### {name}")
     log("| k (較正サンプル数) | " + " | ".join(str(k) for k in KS) + " |")
     log("|---|" + "---:|" * len(KS))
-    log("| 誤差 cm | " + " | ".join(f"{np.median(res_cm[k]):.2f}" for k in KS) + " |")
-    log("| **誤差 度** | " + " | ".join(f"**{np.median(res_dg[k]):.2f}°**" for k in KS) + " |")
+    log("| 誤差 cm (中央値) | " + " | ".join(f"{np.median(res_cm[k]):.2f}" for k in KS) + " |")
+    log("| 誤差 度 (中央値) | " + " | ".join(f"{np.median(res_md[k]):.2f}°" for k in KS) + " |")
+    log("| **角度RMSE (subject-macro, 文献比較用)** | "
+        + " | ".join(f"**{np.mean(res_rm[k]):.2f}°**" for k in KS) + " |")
+    log("| (RMSEの被験者間 標準偏差) | " + " | ".join(f"±{np.std(res_rm[k]):.2f}" for k in KS) + " |")
     log("")
+    FINAL[name] = (np.mean(res_rm[16]), np.std(res_rm[16]))
 
-log("### 比較（同じ MPIIFaceGaze LOPO・ランドマークのみ・少数較正）")
-log("| 手法 | 16-shot LOPO |")
+a = FINAL["16D+目パッチPCA16 (既定)"]; b = FINAL["16D幾何のみ"]
+log("### 比較（MPIIFaceGaze LOPO・ランドマークのみ・16サンプル較正・subject-macro角度RMSE）")
+log("| 手法 | 16-shot LOPO RMSE |")
 log("|---|---:|")
-log("| Ridge on raw landmarks (EMC-Gaze論文の報告) | 27.28°※ |")
-log("| Elastic Net on raw landmarks (同上) | 10.83° |")
-log("| EMC-Gaze (E(3)同変GNN + メタ較正, 2026) | 8.82° |")
-log("| **Tgaze (16D + 目パッチ, 線形Huber, CPU)** | 上表 k=16 を参照 |")
-log("※ Ridge 27.28° は論文のインタラクティブ評価値。MPII LOPO の該当値は論文に無いため参考。")
+log("| Elastic Net on raw landmarks (EMC-Gaze論文 表3) | 10.83° |")
+log("| EMC-Gaze (E(3)同変GNN + メタ較正, arXiv 2603.12388, 2026) | 8.82° ± 1.21 |")
+log(f"| **Tgaze 16D幾何のみ (線形Huber, CPU)** | **{b[0]:.2f}° ± {b[1]:.2f}** |")
+log(f"| **Tgaze 16D + 目パッチ (既定, 線形Huber, CPU)** | **{a[0]:.2f}° ± {a[1]:.2f}** |")
+log("")
+log("**⚠️ 比較の限界（誇張しないための注記）**:")
+log("- EMC-Gaze の MPII 数値は、論文の記述上「自前データで学習した encoder を MPII に転移」")
+log("  （cross-dataset）である可能性が残る。その場合、14人のMPIIで学習する本実験の方が")
+log("  **条件は有利**であり、単純な優劣比較はできない。同一土俵と断定しないこと。")
+log("- 評価フレーム数/前処理も完全一致は確認できていない（論文に記載が無い）。")
+log("- 従って主張できるのは「同じ公開データセット・同じ少数較正の枠組みで、GPU無しの16D線形が")
+log("  この水準に到達した」までであり、「SOTA を上回った」と断定しない。")

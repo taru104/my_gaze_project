@@ -1,0 +1,38 @@
+Tgaze
+Copyright (c) 2026 taru104
+
+Licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0
+International License (CC BY-NC-SA 4.0).
+
+Full license text:
+    https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
+Human-readable summary (not a substitute for the license):
+    https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+WHAT YOU MAY DO
+  - Use, run, and modify this software for personal, academic, research, and
+    educational purposes.
+  - Share it and share your modifications, provided you give appropriate credit
+    ("taru104 / Tgaze", with a link to this repository), indicate changes, and
+    license your derivative work under these same terms.
+
+WHAT REQUIRES PERMISSION
+  - Any commercial use, including use inside a product or service offered for
+    sale, internal use at a for-profit company, or use in paid consulting.
+    Commercial licenses are available: open an issue on the repository to ask.
+
+THIRD-PARTY DATA AND MODELS
+  - Research results in this repository were produced using MPIIFaceGaze
+    (Zhang et al., CVPRW 2017) and reference GazeCapture and ETH-XGaze. Those
+    datasets carry their own licenses (MPIIFaceGaze is CC BY-NC-SA 4.0) and are
+    NOT redistributed here. They are used for evaluation only and are not part
+    of any commercial build.
+  - MediaPipe and its face landmark model are licensed by Google under the
+    Apache License 2.0.
+
+NO WARRANTY
+  This software is provided "as is", without warranty of any kind, express or
+  implied, including but not limited to the warranties of merchantability,
+  fitness for a particular purpose, and noninfringement. In no event shall the
+  author be liable for any claim, damages, or other liability arising from the
+  use of this software.
