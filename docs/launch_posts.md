@@ -148,8 +148,10 @@ Two things I found along the way that might be more interesting than the numbers
 The negative results are in the repo too (limbus ellipse fitting loses to MediaPipe's
 learned landmarks; eye-patch resolution stops paying off past 48x32).
 
-Note on licensing: it's CC BY-NC-SA, so noncommercial only — I'd rather say that
-up front than have someone find out later.
+Note on licensing, up front so nobody wastes their time: this is source-available,
+not open source. Reading the code is free; running or building on it needs permission
+(open an issue — noncommercial requests are normally granted). Commercial use is not
+licensed at all. I'd rather say that here than have someone find out later.
 ```
 
 ---
@@ -185,7 +187,9 @@ of wild off-screen jumps — something the accuracy number couldn't see. I shipp
 version that felt better. Curious how others handle metric-vs-feel disagreements.
 
 Repo (negative results included): https://github.com/taru104/tgaze
-It's CC BY-NC-SA (noncommercial), flagging that up front.
+Flagging up front: it's source-available, not open source — reading is free, running or
+building on it needs permission (open an issue; noncommercial requests are normally
+granted), and commercial use isn't licensed.
 ```
 
 ---
@@ -227,7 +231,7 @@ https://github.com/taru104/tgaze
 ```
 - [Tgaze](https://github.com/taru104/tgaze) — Webcam gaze tracking that outputs
   on-screen coordinates (not just gaze angle). CPU-only, ~2.6 cm after a 9-point
-  calibration. Noncommercial license.
+  calibration. Source-available; use requires permission.
 ```
 
 ---
@@ -235,6 +239,8 @@ https://github.com/taru104/tgaze
 ## 投稿時の注意（守らないと逆効果）
 
 - **数字を盛らない**。「SOTA超え」と書いた瞬間に条件差を突かれ、正直さという最大の資産を失う。
-- **非商用ライセンスを最初に自分から言う**。後で発覚する方が心証が悪い。
+- **ライセンスを最初に自分から言う**。source-available(利用に許諾が要る)は
+  OSSを期待して来た人には意外なので、後で発覚する方が確実に心証が悪い。
+  「読むのは自由・使うなら一声かけて・商用は不可」と最初に書く。
 - 動画/GIFを**最初の3秒**に置く。文章より先に見られる。
 - コメントには全部返す。初速の議論がそのまま順位になる。

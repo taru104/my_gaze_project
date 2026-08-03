@@ -1,20 +1,39 @@
 # NOTICE — Tgaze licensing in plain words
 
-Tgaze © 2026 taru104, licensed under **CC BY-NC-SA 4.0**.
-The full legal text is in [LICENSE](LICENSE). This file is the plain-language summary;
+Tgaze © 2026 taru104. **All rights reserved.**
+The binding terms are in [LICENSE](LICENSE). This file is the plain-language summary;
 where the two differ, LICENSE governs.
 
-## Attribution is mandatory
+## Short version
 
-If you use Tgaze — including for personal, academic, research or educational work — you
-**must** say so, visibly. This is a condition of the license, not a courtesy.
+**The code is published to be read, not to be used freely.**
+Tgaze is *source-available*, not open source.
 
-**In software, papers, posters, demos, blog posts, videos and slides**, include:
+| | |
+|---|---|
+| Reading / reviewing / studying the code | ✅ no permission needed |
+| Running, copying, modifying, building on it | ❌ **ask first** |
+| Personal, educational, academic, research use | ❌ **ask first** — no category is pre-authorised |
+| Commercial use | ❌ **not licensed at all**, and not available on request |
+
+## Asking for permission
+
+Open an issue: https://github.com/taru104/tgaze/issues
+
+Say who you are and what you want to do with it. If it is noncommercial and reasonable,
+expect a yes — the point of asking is that I want to know where Tgaze is being used, not to
+make it hard. Permission is given in writing, for the purpose you describe.
+
+**Do not send commercial licensing requests.** Commercial use is not offered.
+
+## If you get permission, credit is mandatory
+
+Any resulting software, paper, poster, demo, article, video or talk must visibly say:
 
 > This work uses **Tgaze** by taru104 — https://github.com/taru104/tgaze
-> Licensed under CC BY-NC-SA 4.0.
+> Used with permission. © 2026 taru104.
 
-**In academic writing**, cite it:
+For academic writing:
 
 ```bibtex
 @software{tgaze,
@@ -25,38 +44,26 @@ If you use Tgaze — including for personal, academic, research or educational w
 }
 ```
 
-You must also **state what you changed** if you modified it, keep the copyright and license
-notices intact, and release any derivative work under these same terms (ShareAlike).
+Presenting results obtained with Tgaze without naming Tgaze is a breach of the licence.
+If you modified it, say what you changed.
 
-Presenting results obtained with Tgaze without naming Tgaze is a licence violation.
+## Third-party components are not covered by this
 
-## Please tell me if you use it
+The licence covers only the parts written by taru104. These keep their own licences:
 
-Beyond the credit above, I would genuinely like to hear about it — open an issue or a
-discussion on the repository and tell me what you built or measured. This is a **request,
-not a condition**: the license already grants you noncommercial use, and I am not adding
-hurdles on top of it.
+- **MediaPipe** and the bundled `face_landmarker.task` model — © Google LLC, Apache 2.0.
+- **Python dependencies** in `pyproject.toml` / `requirements.txt` — each under its own licence.
+- **MPIIFaceGaze** (Zhang et al., CVPRW 2017), **GazeCapture**, **ETH-XGaze** — research
+  datasets used for *evaluation only*, under their own terms. None are redistributed here.
 
-## Commercial use is not permitted
+## A note on earlier versions
 
-**Tgaze may not be used commercially.** That includes shipping it inside a product or
-service that is sold, using it internally at a for-profit company, and paid consulting
-built on it. This is a flat prohibition, not a negotiation — commercial licenses are
-**not** offered, so please do not ask.
-
-If your use is personal, academic, research or educational, you already have permission
-under the license above and do not need to contact anyone.
-
-## Third-party data and models
-
-- **MediaPipe** and its face landmark model: © Google, Apache License 2.0.
-- **MPIIFaceGaze** (Zhang et al., CVPRW 2017) is used for *evaluation only*, under its own
-  research license (CC BY-NC-SA 4.0). **GazeCapture** and **ETH-XGaze** are referenced.
-  None of these datasets are redistributed in this repository, and none are used in any
-  commercial build.
+Earlier revisions of this repository were published under CC BY-NC-SA 4.0. Creative Commons
+licences are irrevocable, so rights validly obtained under it — **for the versions
+distributed at that time** — still stand. The terms above govern this and later revisions.
 
 ## No warranty
 
-Tgaze is provided "as is", without warranty of any kind. It is a research project, not a
-medical or safety-critical device. Do not use it where a wrong gaze estimate can hurt
+Tgaze is provided "as is", with no warranty of any kind. It is a research project, not a
+medical or safety-critical device. Do not use it anywhere a wrong gaze estimate can hurt
 someone.

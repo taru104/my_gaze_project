@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 authors = [{ name = "taru104" }]
 keywords = ["eye-tracking", "gaze-estimation", "gaze-tracking", "mediapipe", "webcam", "computer-vision"]
-license = { text = "CC-BY-NC-SA-4.0" }
+license = { text = "LicenseRef-Proprietary-Tgaze" }  # source-available; 利用には許諾が必要(LICENSE参照)
 classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering :: Image Recognition",

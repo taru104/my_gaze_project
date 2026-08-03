@@ -11,7 +11,7 @@ https://github.com/user-attachments/assets/b87e13b7-bd6f-421d-bcb7-b413bd32e0a4
   <img src="https://img.shields.io/badge/backbone-MediaPipe-orange.svg" alt="mediapipe">
   <img src="https://img.shields.io/badge/runtime-CPU%20realtime-green.svg" alt="cpu">
   <img src="https://img.shields.io/badge/no-GPU%20required-success.svg" alt="no gpu">
-  <img src="https://img.shields.io/badge/license-CC%20BY--NC--SA%204.0-lightgrey.svg" alt="license">
+  <img src="https://img.shields.io/badge/license-source--available%20(permission%20required)-red.svg" alt="license">
 </p>
 
 ---
@@ -37,6 +37,11 @@ x, y = tracker.predict(frame)       # normalized screen coordinates in [0, 1]
   experiments are published too
 
 ## 🚀 Quick start
+
+> ⚠️ **Read the [licence](#license) first.** Tgaze is source-available, not open source:
+> **running it requires permission**, including for personal, educational and research use.
+> [Open an issue](https://github.com/taru104/tgaze/issues) to ask — noncommercial requests
+> are normally granted.
 
 ```bash
 git clone https://github.com/taru104/tgaze.git
@@ -210,18 +215,26 @@ quietly decide what you believe.
 
 ## License
 
-© taru104. **Noncommercial use only** (CC BY-NC-SA 4.0) — see [LICENSE](LICENSE) and
-[NOTICE.md](NOTICE.md).
+© 2026 taru104. **All rights reserved.** Tgaze is **source-available, not open source** —
+see [LICENSE](LICENSE) and [NOTICE.md](NOTICE.md).
 
-**Crediting Tgaze is mandatory**, including for academic, research and educational use.
-If you publish anything produced with it — a paper, a demo, a blog post, a video — it must say:
+You may **read and study** the code freely. **Any other use — running it, copying it,
+modifying it, building on it — requires prior written permission**, and that includes
+personal, educational, academic and research use. No category is pre-authorised.
 
-> This work uses **Tgaze** by taru104 — https://github.com/taru104/tgaze (CC BY-NC-SA 4.0)
+**To ask, [open an issue](https://github.com/taru104/tgaze/issues)** saying who you are and
+what you want to do. If it is noncommercial and reasonable, expect a yes — the point is that
+I want to know where Tgaze is used, not to make it difficult.
 
-Presenting results obtained with Tgaze without naming it is a licence violation.
-Derivative work must be released under these same terms.
+**Commercial use is not licensed** and commercial licences are not offered.
 
-**Commercial use is not permitted** — a flat prohibition; commercial licenses are not offered.
+If permission is granted, crediting Tgaze is mandatory: any resulting software, paper, demo,
+article or talk must say *"This work uses Tgaze by taru104 —
+https://github.com/taru104/tgaze"*. Presenting results obtained with Tgaze without naming it
+is a breach of the licence.
+
+Third-party components keep their own licences — MediaPipe and the bundled
+`face_landmarker.task` model are © Google LLC under Apache 2.0.
 
 ## Acknowledgments
 
