@@ -27,7 +27,7 @@ _review/
 .env.*
 *.key
 *.pem
-.claude/*
+.claude/
 !.claude/settings.json
 # 内部開発メモ(公開しない・ローカルで継続利用する再開ノート)
 RESUME.md
