@@ -41,10 +41,13 @@ x, y = tracker.predict(frame)       # normalized screen coordinates in [0, 1]
 ```bash
 git clone https://github.com/taru104/my_gaze_project.git
 cd my_gaze_project
-pip install -r requirements.txt
+pip install -e .                  # or: pip install -r requirements.txt
 
 python examples/quickstart.py     # calibrate, then watch the gaze dot follow you
 ```
+
+<sub>`pip install tgaze` from PyPI is not available yet — the runtime needs the landmark model
+file that ships with this repo. Installing from a clone is the supported path today.</sub>
 
 Or run the full app with its HUD, head-pose preview and live accuracy readout:
 
