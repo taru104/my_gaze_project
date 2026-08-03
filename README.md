@@ -210,9 +210,10 @@ quietly decide what you believe.
 
 ## License
 
-© taru104. **Noncommercial use only** (CC BY-NC-SA 4.0) — see [LICENSE](LICENSE).
-Free for personal, research and educational use **with attribution** (credit **taru104 / Tgaze**).
-**Commercial use requires prior written permission**; open an issue to ask.
+© taru104. **Noncommercial use only** (CC BY-NC-SA 4.0) — see [LICENSE](LICENSE) and
+[NOTICE.md](NOTICE.md). Free for personal, research and educational use **with attribution**
+(credit **taru104 / Tgaze**). **Commercial use is not permitted** — this is a flat prohibition
+and commercial licenses are not offered.
 
 ## Acknowledgments
 

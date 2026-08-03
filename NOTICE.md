@@ -13,14 +13,15 @@ purposes — provided you:
 - state what you changed, and
 - release your derivative work under these same terms (ShareAlike).
 
-## Commercial use needs permission
+## Commercial use is not permitted
 
-**Anything commercial requires prior written permission.** That includes shipping Tgaze
-inside a product or service that is sold, using it internally at a for-profit company,
-and paid consulting built on it.
+**Tgaze may not be used commercially.** That includes shipping it inside a product or
+service that is sold, using it internally at a for-profit company, and paid consulting
+built on it. This is a flat prohibition, not a negotiation — commercial licenses are
+**not** offered, so please do not ask.
 
-Commercial licenses are available — **open an issue** on the repository to ask.
-I would rather say yes to a clear request than have people guess.
+If your use is personal, academic, research or educational, you already have permission
+under the license above and do not need to contact anyone.
 
 ## Third-party data and models
 
