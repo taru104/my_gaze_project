@@ -40,3 +40,8 @@ RESUME.md
 .idea/
 .DS_Store
 Thumbs.db
+
+# ビルド成果物
+*.egg-info/
+build/
+dist/
