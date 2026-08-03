@@ -39,8 +39,8 @@ x, y = tracker.predict(frame)       # normalized screen coordinates in [0, 1]
 ## 🚀 Quick start
 
 ```bash
-git clone https://github.com/taru104/my_gaze_project.git
-cd my_gaze_project
+git clone https://github.com/taru104/tgaze.git
+cd tgaze
 pip install -e .                  # or: pip install -r requirements.txt
 
 python examples/quickstart.py     # calibrate, then watch the gaze dot follow you
@@ -204,7 +204,7 @@ quietly decide what you believe.
   title  = {Tgaze: True Gaze — calibration-light webcam eye tracking},
   author = {taru104},
   year   = {2026},
-  url    = {https://github.com/taru104/my_gaze_project}
+  url    = {https://github.com/taru104/tgaze}
 }
 ```
 

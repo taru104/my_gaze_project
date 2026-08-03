@@ -27,8 +27,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/taru104/my_gaze_project"
-Repository = "https://github.com/taru104/my_gaze_project"
+Homepage = "https://github.com/taru104/tgaze"
+Repository = "https://github.com/taru104/tgaze"
 
 # ── パッケージ構成についての注意 ────────────────────────────────────────────
 # 現状 `tgaze` は、リポジトリ直下のコアモジュール
