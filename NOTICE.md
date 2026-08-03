@@ -4,14 +4,38 @@ Tgaze © 2026 taru104, licensed under **CC BY-NC-SA 4.0**.
 The full legal text is in [LICENSE](LICENSE). This file is the plain-language summary;
 where the two differ, LICENSE governs.
 
-## You may, for free
+## Attribution is mandatory
 
-Use, run, modify and share Tgaze for **personal, academic, research and educational**
-purposes — provided you:
+If you use Tgaze — including for personal, academic, research or educational work — you
+**must** say so, visibly. This is a condition of the license, not a courtesy.
 
-- credit **taru104 / Tgaze** with a link to https://github.com/taru104/tgaze,
-- state what you changed, and
-- release your derivative work under these same terms (ShareAlike).
+**In software, papers, posters, demos, blog posts, videos and slides**, include:
+
+> This work uses **Tgaze** by taru104 — https://github.com/taru104/tgaze
+> Licensed under CC BY-NC-SA 4.0.
+
+**In academic writing**, cite it:
+
+```bibtex
+@software{tgaze,
+  title  = {Tgaze: True Gaze — calibration-light webcam eye tracking},
+  author = {taru104},
+  year   = {2026},
+  url    = {https://github.com/taru104/tgaze}
+}
+```
+
+You must also **state what you changed** if you modified it, keep the copyright and license
+notices intact, and release any derivative work under these same terms (ShareAlike).
+
+Presenting results obtained with Tgaze without naming Tgaze is a licence violation.
+
+## Please tell me if you use it
+
+Beyond the credit above, I would genuinely like to hear about it — open an issue or a
+discussion on the repository and tell me what you built or measured. This is a **request,
+not a condition**: the license already grants you noncommercial use, and I am not adding
+hurdles on top of it.
 
 ## Commercial use is not permitted
 

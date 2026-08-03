@@ -211,9 +211,17 @@ quietly decide what you believe.
 ## License
 
 © taru104. **Noncommercial use only** (CC BY-NC-SA 4.0) — see [LICENSE](LICENSE) and
-[NOTICE.md](NOTICE.md). Free for personal, research and educational use **with attribution**
-(credit **taru104 / Tgaze**). **Commercial use is not permitted** — this is a flat prohibition
-and commercial licenses are not offered.
+[NOTICE.md](NOTICE.md).
+
+**Crediting Tgaze is mandatory**, including for academic, research and educational use.
+If you publish anything produced with it — a paper, a demo, a blog post, a video — it must say:
+
+> This work uses **Tgaze** by taru104 — https://github.com/taru104/tgaze (CC BY-NC-SA 4.0)
+
+Presenting results obtained with Tgaze without naming it is a licence violation.
+Derivative work must be released under these same terms.
+
+**Commercial use is not permitted** — a flat prohibition; commercial licenses are not offered.
 
 ## Acknowledgments
 
